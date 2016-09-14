@@ -1,0 +1,24 @@
+{
+  "name": "ng-d3-chart",
+  "version": "1.0.0",
+  "description": "Angular directives for d3 charts",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sylvestre67/ng-d3-chart.git"
+  },
+  "keywords": [
+    "angular",
+    "d3",
+    "charts"
+  ],
+  "author": "sylvestre.gug@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Sylvestre67/ng-d3-chart/issues"
+  },
+  "homepage": "https://github.com/Sylvestre67/ng-d3-chart#readme"
+}

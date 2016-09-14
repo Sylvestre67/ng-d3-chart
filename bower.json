@@ -1,0 +1,23 @@
+{
+  "name": "ng-d3-chart",
+  "description": "Angular directives for d3 charts",
+  "main": "index.js",
+  "authors": [
+    "sylvestre.gug@gmail.com"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "angular",
+    "d3",
+    "charts"
+  ],
+  "homepage": "https://github.com/Sylvestre67/ng-d3-chart",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "static/vendor/",
+    "test",
+    "tests"
+  ]
+}
