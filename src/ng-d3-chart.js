@@ -52,7 +52,8 @@
 			this.margin = config.margin || {top: 30, right: 30, bottom: 30, left: 30},
 			this.bar_padding = config.bar_padding || .5,
 			this.bar_outer_padding = config.bar_outer_padding || .2,
-			this.color = config.color || '#3498DB';
+			this.barColor = config.barColor || '#3498DB';
+			this.bakcgroundColor = config.bakcgroundColor || 'white';
 		};
 
 		return chartConfig;
@@ -63,13 +64,17 @@
 		function drawBarChart(config,data,element,attrs){
 
 			var margin = config.margin,
+
 				full_width = attrs.$$element[0].parentElement.clientWidth,
 				full_height = attrs.$$element[0].parentElement.clientHeight,
 				width = full_width - margin.left - margin.right,
 				height = full_height - margin.top - margin.bottom,
+
 				bar_padding = config.bar_padding,
 				bar_outer_padding = config.bar_outer_padding,
-				color = config.color;
+
+				barColor = config.barColor,
+				backgroundColor = config.bakcgroundColor;
 
 			var x = d3.scale.ordinal()
 				.rangeRoundBands([0,width],bar_padding,bar_outer_padding);
@@ -88,12 +93,26 @@
 				.outerTickSize(0)
 				.orient("left");
 
-			var svg = d3.select(element[0])
+			var mask,x_axis_node,y_axis_node;
+			var svg =  d3.select(element[0]).select('svg');
+
+			(svg[0][0] == null)
+				? (svg = d3.select(element[0])
 					.append("svg:svg")
-				.attr("width", full_width)
-				.attr("height", full_height)
-					.append("svg:g")
-				.attr("transform", "translate(" + margin.left + "," + margin.top +")");
+					.attr("width", full_width)
+					.attr("height", full_height)
+						.append("svg:g")
+					.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
+
+					x_axis_node = svg.append('g')
+						.attr('class','axis x')
+						.attr('transform', 'translate(' + 0 + ',' + height + ')'),
+
+					y_axis_node = svg.append('g')
+						.attr('class','axis y')
+						.attr('transform', 'translate(' + 0 + ',' + 0 + ')')
+				)
+				: false;
 
 			// Set up x_axis with non-numeric values.
 			var x_domain = [];
@@ -104,14 +123,15 @@
 			var max_y = d3.max(data,function(d){ return d.y; });
 			y.domain([0,max_y]);
 
-			var bar = svg.selectAll(".bar")
-				.data(data)
-				.enter().append("g")
+			var bars = svg.selectAll(".bar")
+				.data(data);
+
+			var new_bars = bars.enter().append("g")
 				.attr("class","bar")
 				.attr("transform", function(d) { return "translate(" + x(d.x) + "," + 0 + ")"; });
 
-			bar.append("rect")
-					.style('fill',function(d,i){ return color; })
+			new_bars.append("rect")
+					.style('fill',function(d,i){ return barColor; })
 					.attr("y", function(d) { return y(0); })
 				.attr("height", function(d) { return height - y(d.y); })
 				.attr("width", x.rangeBand())
@@ -119,42 +139,28 @@
 						.attr("y", function(d) { return y(d.y); })
 							.delay(function(d,i) { return i*100; });
 
-			var mask = svg.append('rect')
-				.attr('class','mask')
-				.attr("y",height)
-				.attr("x",0)
-				.attr("width",width)
-				.attr("height",margin.bottom)
-				.style("fill","white");
+			bars.exit()
+				.transition()
+			  .duration(300)
+				.remove();
 
-			var x_axis_node = svg.append('g')
-				.attr('class','axis x')
-				.attr('transform', 'translate(' + 0 + ',' + height + ')');
+			bars.selectAll('rect').transition().duration(500)
+				.attr("height", function(d) { return height - y(d.y); })
+				.attr("y", function(d) { return y(d.y); })
+					.delay(function(d,i) { return i*100; });
 
-			x_axis_node.call(x_axis);
+			(svg[0][0] == null)
+				? mask = svg.append('rect')
+						.attr('class','mask')
+						.attr("y",height)
+						.attr("x",0)
+						.attr("width",width)
+						.attr("height",margin.bottom)
+						.style("fill", backgroundColor)
+				: false;
 
-			var y_axis_node = svg.append('g')
-				.attr('class','axis y')
-				.attr('transform', 'translate(' + 0 + ',' + 0 + ')');
-
-			 y_axis_node.call(y_axis);
-
-			/*x_axis_node.selectAll('text')
-				.attr('dx', '-.5em')
-				.attr('y',4);
-
-			// Adjusting the position of overlapping labels on x_axis
-			/*x_axis_node.selectAll("g.x.axis g.tick line")
-				.attr("y2", function(d,i){ return ( i % 2 === 0) ? 25 : 10; });
-
-			x_axis_node.selectAll('text')
-				.attr("transform", function(d,i){
-					var y; ( i % 2 === 0) ? y = 15 : y = 0;
-					return 'translate(0,'+ y  +')';
-				});*/
-		}
-
-		function updateBarChart(){
+			svg.select('.x.axis').transition().duration(300).call(x_axis);
+			svg.select(".y.axis").transition().duration(300).call(y_axis)
 
 		}
 
