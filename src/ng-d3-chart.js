@@ -46,18 +46,30 @@
 
 	}]);
 
+	mod.factory('chartConfig',function(){
+
+		var chartConfig = function(config){
+			this.margin = config.margin || {top: 30, right: 30, bottom: 30, left: 30},
+			this.bar_padding = config.bar_padding || .5,
+			this.bar_outer_padding = config.bar_outer_padding || .2,
+			this.color = config.color || '#3498DB';
+		};
+
+		return chartConfig;
+	});
+
 	mod.directive('ngBarChart', ['d3Loader','$timeout', function(d3Loader,$timeout) {
 
-		function drawBarChart(data,element,attrs,color){
+		function drawBarChart(config,data,element,attrs){
 
-			var margin = {top: 30, right: 30, bottom: 30, left: 30},
+			var margin = config.margin,
 				full_width = attrs.$$element[0].parentElement.clientWidth,
 				full_height = attrs.$$element[0].parentElement.clientHeight,
 				width = full_width - margin.left - margin.right,
 				height = full_height - margin.top - margin.bottom,
-				bar_padding = .5,
-				bar_outer_padding = .2,
-				range;
+				bar_padding = config.bar_padding,
+				bar_outer_padding = config.bar_outer_padding,
+				color = config.color;
 
 			var x = d3.scale.ordinal()
 				.rangeRoundBands([0,width],bar_padding,bar_outer_padding);
@@ -142,18 +154,23 @@
 				});*/
 		}
 
+		function updateBarChart(){
+
+		}
+
 		return {
 			restrict: 'E',
 			scope: {
-				dataset:'='
+				dataset:'=',
+				config:'='
 			},
 			link: function(scope,element,attrs){
 				var d3isReady = d3Loader.d3();
-				d3isReady.then(function(){
-					$timeout(
-						drawBarChart(scope.dataset,element,attrs,'#3498DB')
-					);
-				})
+				scope.$watch('dataset',function(newData,oldData){
+					(newData)
+						? (d3isReady.then(function(){ $timeout(function(){drawBarChart(scope.config,scope.dataset,element,attrs);});}))
+						: false;
+				});
 			}
 		};
 	}]);
