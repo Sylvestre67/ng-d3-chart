@@ -49,11 +49,21 @@
 	mod.factory('chartConfig',function(){
 
 		var chartConfig = function(config){
-			this.margin = config.margin || {top: 30, right: 30, bottom: 30, left: 30},
-			this.bar_padding = config.bar_padding || .5,
-			this.bar_outer_padding = config.bar_outer_padding || .2,
+			//Layout configuration
+			this.margin = config.margin || {top: 30, right: 30, bottom: 30, left: 30};
+			this.barPadding = config.barPadding || .5;
+			this.barOuterPadding = config.barOuterPadding || .2;
+
+			//Axis configuration
+			this.showXaxis = true;
+			this.showYaxis = false;
+
+			//Basic style configuration
 			this.barColor = config.barColor || '#3498DB';
 			this.bakcgroundColor = config.bakcgroundColor || 'white';
+
+			//Animation configuration
+			this.delayedEntrance = config.delayedEntrance || 100;
 		};
 
 		return chartConfig;
@@ -70,8 +80,8 @@
 				width = full_width - margin.left - margin.right,
 				height = full_height - margin.top - margin.bottom,
 
-				bar_padding = config.bar_padding,
-				bar_outer_padding = config.bar_outer_padding,
+				bar_padding = config.barPadding,
+				bar_outer_padding = config.barOuterPadding,
 
 				barColor = config.barColor,
 				backgroundColor = config.bakcgroundColor;
@@ -106,15 +116,9 @@
 					.select('svg')
 					.select('g')[0][0] == null;
 
-			//Set the margin left required to display the longest labe on y axis.
-			var y_format = y_axis.scale().tickFormat();
-
-			var widest_y_label = d3.select(element[0]).append('text')
-				.text(y_format(y_axis.scale().ticks()[y_axis.scale().ticks().length -1]));
-
-			margin.left = (widest_y_label[0][0].offsetWidth * 1.5);
-
-			widest_y_label.remove();
+			(config.showYaxis)
+				? leftMarginToBiggestYLabelWidth()
+				: false;
 
 			var mask,x_axis_node,y_axis_node,initial,svg;
 
@@ -137,15 +141,16 @@
 			bar_nodes.enter().append("rect")
 				.attr("class", "bar")
 				.style('fill',function(d){ return barColor; })
-					.attr("y", function(d) { console.log(y(0)); return y(0); });
+					.attr("y", function(d) { return y(0); });
 
 			bar_nodes.transition().duration(300)
 				.attr("x", function(d) { return x(d.x); })
 				.attr("y", function(d,i) { return y(d.y); })
 				.attr("width", x.rangeBand())
-						.attr("height", function(d) { return height - y(d.y); });
-					//.delay(function(d,i) { return i*100; });
+						.attr("height", function(d) { return height - y(d.y); })
+						.delay(function(d,i) { return i*config.delayedEntrance; });
 
+			//Remove and redraw x_axis because bottom to top animation.
 			svg.select('.axis.x').remove();
 
 			mask = svg.append('rect')
@@ -167,13 +172,22 @@
 					initial=false)
 				: false;
 
-			svg.select('.x.axis').transition().duration(300).call(x_axis);
-			svg.select('.y.axis').transition().duration(300).call(y_axis);
+			(config.showXaxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis) : false;
+			(config.showYaxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis) : false;
 
-			//GET WIDTH OF Y LABEL
-			//var widest_y_label = svg.selectAll('.y.axis text')[0][svg.selectAll('.y.axis text')[0].length - 1].getBBox().width
-			//MOVE ORIGINAL SVG
-			//svg.attr("transform", "translate(" + (widest_y_label + 10) + "," + margin.top +")");
+			function leftMarginToBiggestYLabelWidth(){
+				var y_format,widest_y_label;
+				//Set the margin left to display the longest label on y axis.
+				y_format = y_axis.scale().tickFormat(),
+				widest_y_label = d3.select(element[0]).append('text')
+					.text(y_format(y_axis.scale().ticks()[y_axis.scale().ticks().length -1])),
+				//Only if the given margin.left on the config object is smaller than the biggest label.
+				(margin.left < widest_y_label[0][0].offsetWidth * 1.5 )
+					? margin.left = (widest_y_label[0][0].offsetWidth * 1.5)
+					: false;
+				widest_y_label.remove();
+				return true;
+			}
 
 		}
 
