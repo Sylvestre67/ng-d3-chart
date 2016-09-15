@@ -93,20 +93,6 @@
 				.outerTickSize(0)
 				.orient("left");
 
-			var mask,x_axis_node,y_axis_node,initial;
-			var svg =  d3.select(element[0]).select('svg');
-
-			(svg[0][0] == null)
-				? (svg = d3.select(element[0])
-					.append("svg:svg")
-					.attr("width", full_width)
-					.attr("height", full_height)
-						.append("svg:g")
-					.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
-					initial = true
-				)
-				: false;
-
 			// Set up x_axis with non-numeric values.
 			var x_domain = [];
 			angular.forEach(data,function(d,i){	x_domain.push(d.x); });
@@ -116,47 +102,78 @@
 			var max_y = d3.max(data,function(d){ return d.y; });
 			y.domain([0,max_y * 1.1]);
 
+			var svgNotExist =  d3.select(element[0])
+					.select('svg')
+					.select('g')[0][0] == null;
+
+			//Set the margin left required to display the longest labe on y axis.
+			var y_format = y_axis.scale().tickFormat();
+
+			var widest_y_label = d3.select(element[0]).append('text')
+				.text(y_format(y_axis.scale().ticks()[y_axis.scale().ticks().length -1]));
+
+			margin.left = (widest_y_label[0][0].offsetWidth * 1.5);
+
+			widest_y_label.remove();
+
+			var mask,x_axis_node,y_axis_node,initial,svg;
+
+			(svgNotExist)
+				? (svg = d3.select(element[0])
+					.append("svg:svg")
+					.attr("width", full_width)
+					.attr("height", full_height)
+						.append("svg:g")
+					.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
+					initial = true
+				)
+				: svg = d3.select(element[0]).select('svg g');
+
 			var bar_nodes = svg.selectAll(".bar")
 				.data(data);
 
-			bar_nodes.exit().transition().duration(300).remove();
+			bar_nodes.exit().remove();
 
 			bar_nodes.enter().append("rect")
-				.style('fill',function(d,i){ return barColor; })
-					.attr("class", "bar")
-					.attr("y", function(d) { return y(0); });
+				.attr("class", "bar")
+				.style('fill',function(d){ return barColor; })
+					.attr("y", function(d) { console.log(y(0)); return y(0); });
 
-			bar_nodes.transition().duration(500)
+			bar_nodes.transition().duration(300)
 				.attr("x", function(d) { return x(d.x); })
 				.attr("y", function(d,i) { return y(d.y); })
 				.attr("width", x.rangeBand())
-				.attr("height", function(d) { return height - y(d.y); });
+						.attr("height", function(d) { return height - y(d.y); });
 					//.delay(function(d,i) { return i*100; });
 
-			(initial == true)
-				? (
-					mask = svg.append('rect')
-						.attr('class','mask')
-						.attr("y",height)
-						.attr("x",0)
-						.attr("width",width)
-						.attr("height",margin.bottom)
-						.style("fill", backgroundColor),
+			svg.select('.axis.x').remove();
 
-					x_axis_node = svg.append('g')
-						.attr('class','axis x')
-						.attr('transform', 'translate(' + 0 + ',' + height + ')'),
+			mask = svg.append('rect')
+				.attr('class','mask')
+				.attr("y",height)
+				.attr("x",0)
+				.attr("width",width)
+				.attr("height",margin.bottom)
+				.style("fill", backgroundColor);
 
-					y_axis_node = svg.append('g')
-						.attr('class','axis y')
-						.attr('transform', 'translate(' + 0 + ',' + 0 + ')'),
+			x_axis_node = svg.append('g')
+				.attr('class','axis x')
+				.attr('transform', 'translate(' + 0 + ',' + height + ')');
 
-					initial = false
-				)
+			(initial) ? (
+				y_axis_node = svg.append('g')
+					.attr('class','axis y')
+					.attr('transform', 'translate(' + 0 + ',' + 0 + ')'),
+					initial=false)
 				: false;
 
 			svg.select('.x.axis').transition().duration(300).call(x_axis);
-			svg.select(".y.axis").transition().duration(300).call(y_axis);
+			svg.select('.y.axis').transition().duration(300).call(y_axis);
+
+			//GET WIDTH OF Y LABEL
+			//var widest_y_label = svg.selectAll('.y.axis text')[0][svg.selectAll('.y.axis text')[0].length - 1].getBBox().width
+			//MOVE ORIGINAL SVG
+			//svg.attr("transform", "translate(" + (widest_y_label + 10) + "," + margin.top +")");
 
 		}
 
