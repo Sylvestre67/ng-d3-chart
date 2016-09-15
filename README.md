@@ -27,7 +27,7 @@ Add reference to ng-d3-chart js and css
 <script src="/bower_components/ng-d3-chart/dist/ng-d3-chart.min.js"></script>
 ```
 
-Where you declare your app module, add ng-yt-player:
+Where you declare your app module, add ng-d3-charts:
 ```javascript
 angular.module('myApp',[
 	'ng-d3-charts',
@@ -37,7 +37,7 @@ In your javascript file within the controller where you plan to use ng-d3-charts
 ```javascript
 angular.controller('home',function($scope,chartConfig){
   //YouTube player configuration
-	$scope.chartConfig = new YchartConfig({});
+	$scope.chartConfig = new chartConfig({});
 });  
 ```
 In your html file within the controller where you plan to use ng-d3-charts, add:
