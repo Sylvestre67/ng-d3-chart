@@ -23,8 +23,8 @@ The library is then available at ``.
 
 Add reference to ng-d3-chart js and css
 ```html
-<link rel="stylesheet" href="/bower_components/ng-d3-chart/ng-d3-chart/ng-d3-chart.min.css">
-<script src="/bower_components/ng-d3-chart/dist/ng-d3-chart.min.js"></script>
+<link rel="stylesheet" href="/bower_components/ng-d3-charts/ng-d3-charts.min.css">
+<script src="/bower_components/ng-d3-charts/dist/ng-d3-charts.min.js"></script>
 ```
 
 Where you declare your app module, add ng-d3-charts:
