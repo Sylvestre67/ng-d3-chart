@@ -93,7 +93,7 @@
 				.outerTickSize(0)
 				.orient("left");
 
-			var mask,x_axis_node,y_axis_node;
+			var mask,x_axis_node,y_axis_node,initial;
 			var svg =  d3.select(element[0]).select('svg');
 
 			(svg[0][0] == null)
@@ -103,14 +103,7 @@
 					.attr("height", full_height)
 						.append("svg:g")
 					.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
-
-					x_axis_node = svg.append('g')
-						.attr('class','axis x')
-						.attr('transform', 'translate(' + 0 + ',' + height + ')'),
-
-					y_axis_node = svg.append('g')
-						.attr('class','axis y')
-						.attr('transform', 'translate(' + 0 + ',' + 0 + ')')
+					initial = true
 				)
 				: false;
 
@@ -121,46 +114,49 @@
 
 			//Set up y_axis
 			var max_y = d3.max(data,function(d){ return d.y; });
-			y.domain([0,max_y]);
+			y.domain([0,max_y * 1.1]);
 
-			var bars = svg.selectAll(".bar")
+			var bar_nodes = svg.selectAll(".bar")
 				.data(data);
 
-			var new_bars = bars.enter().append("g")
-				.attr("class","bar")
-				.attr("transform", function(d) { return "translate(" + x(d.x) + "," + 0 + ")"; });
+			bar_nodes.exit().transition().duration(300).remove();
 
-			new_bars.append("rect")
-					.style('fill',function(d,i){ return barColor; })
-					.attr("y", function(d) { return y(0); })
-				.attr("height", function(d) { return height - y(d.y); })
+			bar_nodes.enter().append("rect")
+				.style('fill',function(d,i){ return barColor; })
+					.attr("class", "bar")
+					.attr("y", function(d) { return y(0); });
+
+			bar_nodes.transition().duration(500)
+				.attr("x", function(d) { return x(d.x); })
+				.attr("y", function(d,i) { return y(d.y); })
 				.attr("width", x.rangeBand())
-					.transition().duration(500)
-						.attr("y", function(d) { return y(d.y); })
-							.delay(function(d,i) { return i*100; });
+				.attr("height", function(d) { return height - y(d.y); });
+					//.delay(function(d,i) { return i*100; });
 
-			bars.exit()
-				.transition()
-			  .duration(300)
-				.remove();
-
-			bars.selectAll('rect').transition().duration(500)
-				.attr("height", function(d) { return height - y(d.y); })
-				.attr("y", function(d) { return y(d.y); })
-					.delay(function(d,i) { return i*100; });
-
-			(svg[0][0] == null)
-				? mask = svg.append('rect')
+			(initial == true)
+				? (
+					mask = svg.append('rect')
 						.attr('class','mask')
 						.attr("y",height)
 						.attr("x",0)
 						.attr("width",width)
 						.attr("height",margin.bottom)
-						.style("fill", backgroundColor)
+						.style("fill", backgroundColor),
+
+					x_axis_node = svg.append('g')
+						.attr('class','axis x')
+						.attr('transform', 'translate(' + 0 + ',' + height + ')'),
+
+					y_axis_node = svg.append('g')
+						.attr('class','axis y')
+						.attr('transform', 'translate(' + 0 + ',' + 0 + ')'),
+
+					initial = false
+				)
 				: false;
 
 			svg.select('.x.axis').transition().duration(300).call(x_axis);
-			svg.select(".y.axis").transition().duration(300).call(y_axis)
+			svg.select(".y.axis").transition().duration(300).call(y_axis);
 
 		}
 
@@ -174,7 +170,7 @@
 				var d3isReady = d3Loader.d3();
 				scope.$watch('dataset',function(newData,oldData){
 					(newData)
-						? (d3isReady.then(function(){ $timeout(function(){drawBarChart(scope.config,scope.dataset,element,attrs);});}))
+						? (d3isReady.then(function(){ $timeout(function(){drawBarChart(scope.config,newData,element,attrs);});}))
 						: false;
 				});
 			}
