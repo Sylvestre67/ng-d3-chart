@@ -1,5 +1,5 @@
 {
-  "name": "ng-d3-chart",
+  "name": "ng-d3-charts",
   "version": "1.0.0",
   "description": "Angular directives for d3 charts",
   "main": "index.js",
