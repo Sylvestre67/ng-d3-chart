@@ -32,7 +32,7 @@
 			var scriptTag 		= $document[0].createElement('script');
 			scriptTag.type 		= 'text/javascript';
 			scriptTag.async 	= true;
-			scriptTag.src 		= '/static/vendor/d3/d3.min.js';
+			scriptTag.src 		= 'https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js';
 
 			scriptTag.onreadystatechange = function () {
 				if (this.readyState == 'complete') onScriptLoad();
@@ -74,15 +74,12 @@
 		function drawBarChart(config,data,element,attrs){
 
 			var margin = config.margin,
-
 				full_width = attrs.$$element[0].parentElement.clientWidth,
 				full_height = attrs.$$element[0].parentElement.clientHeight,
 				width = full_width - margin.left - margin.right,
 				height = full_height - margin.top - margin.bottom,
-
 				bar_padding = config.barPadding,
 				bar_outer_padding = config.barOuterPadding,
-
 				barColor = config.barColor,
 				backgroundColor = config.bakcgroundColor;
 
@@ -175,6 +172,7 @@
 			(config.showXaxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis) : false;
 			(config.showYaxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis) : false;
 
+			//HELPERS
 			function leftMarginToBiggestYLabelWidth(){
 				var y_format,widest_y_label;
 				//Set the margin left to display the longest label on y axis.
