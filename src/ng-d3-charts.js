@@ -48,9 +48,6 @@
 
 	mod.factory('chartConfig',function(){
 
-		//Axis configuration
-
-
 		var chartConfig = function(config){
 
 			this.chartType = config.chartType || null;
@@ -99,8 +96,6 @@
 	mod.directive('ngBarChart', ['d3Loader','$timeout', function(d3Loader,$timeout) {
 
 		function barChart(config,data,element,attrs){
-
-			console.log(config);
 
 			var margin = config.margin,
 				full_width = attrs.$$element[0].parentNode.clientWidth,
