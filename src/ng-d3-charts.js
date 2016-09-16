@@ -49,6 +49,8 @@
 	mod.factory('chartConfig',function(){
 
 		var chartConfig = function(config){
+			this.chartType = config.chartType || null;
+
 			//Layout configuration
 			this.margin = config.margin || {top: 30, right: 30, bottom: 30, left: 30};
 			this.barPadding = config.barPadding || .5;
@@ -71,11 +73,11 @@
 
 	mod.directive('ngBarChart', ['d3Loader','$timeout', function(d3Loader,$timeout) {
 
-		function drawBarChart(config,data,element,attrs){
+		function barChart(config,data,element,attrs){
 
 			var margin = config.margin,
-				full_width = attrs.$$element[0].parentElement.clientWidth,
-				full_height = attrs.$$element[0].parentElement.clientHeight,
+				full_width = attrs.$$element[0].parentNode.clientWidth,
+				full_height= attrs.$$element[0].parentNode.offsetHeight,
 				width = full_width - margin.left - margin.right,
 				height = full_height - margin.top - margin.bottom,
 				bar_padding = config.barPadding,
@@ -120,7 +122,7 @@
 					.select('g')[0][0] == null;
 
 			(config.showYaxis)
-				? leftMarginToBiggestYLabelWidth()
+				? margin = leftMarginToBiggestYLabelWidth(element,y_axis,margin)
 				: false;
 
 			var mask,x_axis_node,y_axis_node,initial,svg;
@@ -130,6 +132,7 @@
 					.append("svg:svg")
 					.attr("width", full_width)
 					.attr("height", full_height)
+					.attr("class","bar-chart")
 						.append("svg:g")
 					.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
 					initial = true
@@ -182,8 +185,118 @@
 			(config.showXaxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis) : false;
 			(config.showYaxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis) : false;
 
-			//HELPERS
-			function leftMarginToBiggestYLabelWidth(){
+		}
+
+		function lineChart(config,data,element,attrs) {
+
+			var margin = config.margin,
+				full_width = attrs.$$element[0].parentNode.clientWidth,
+				full_height = attrs.$$element[0].parentNode.offsetHeight,
+				width = full_width - margin.left - margin.right,
+				height = full_height - margin.top - margin.bottom;
+
+			var x = d3.scale.linear()
+				.range([0, width]);
+
+			var y = d3.scale.linear()
+				.range([height, 0]);
+
+			var xAxis = d3.svg.axis()
+				.scale(x)
+				.tickSize(6)
+				.outerTickSize(0)
+				.orient("bottom");
+
+			x.domain(d3.extent(data, function (d) {
+				return d.x;
+			}));
+
+			var yAxis = d3.svg.axis()
+				.scale(y)
+				.tickSize(6)
+				.outerTickSize(0)
+				.orient("left");
+
+			y.domain(d3.extent(data, function (d) {
+				return d.y;
+			}));
+
+			var svgNotExist = d3.select(element[0]).select('svg')
+					.select('g')[0][0] == null;
+
+			var x_axis_node, y_axis_node, initial, svg;
+
+			(config.showYaxis)
+				? margin = leftMarginToBiggestYLabelWidth(element, yAxis, margin)
+				: false;
+
+			(svgNotExist)
+				? (svg = d3.select(element[0])
+					.append("svg:svg")
+					.attr("class", "line-chart")
+					.attr("width", full_width)
+					.attr("height", full_height)
+					.append("svg:g")
+					.attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
+
+					initial = true
+			)
+				: svg = d3.select(element[0]).select('svg g');
+
+			var line = d3.svg.line()
+				.x(function (d) {
+					return x(d.x);
+				})
+				.y(function (d) {
+					return y(d.y);
+				});
+
+			(initial)
+				? (
+				x_axis_node = svg.append("g")
+					.attr("class", "x axis")
+					.attr("transform", "translate(0," + (height) + ")")
+					.call(xAxis),
+
+				x_axis_node.append("text")
+					.style("text-anchor", "end")
+					.style("font-size", ".6em")
+					.attr("dx", (width - 5) + "px")
+					.attr("dy", "1.5em")
+					.text(config.XlabelText),
+
+				y_axis_node = svg.append("g")
+					.attr("class", "y axis")
+					.call(yAxis),
+
+				y_axis_node.append("text")
+					.attr("class", "axis-label")
+					.attr("transform", "rotate(-90)")
+					.attr("y", 6)
+					.attr("dy", ".6em")
+					.style("text-anchor", "end")
+					.style("font-size", ".6em")
+					.text(config.YlabelText),
+
+				svg.append("path")
+					.attr("class", "line")
+					.attr("d", line(data))
+				)
+				: (
+					svg.select(".x.axis")
+						.transition().duration(750)
+						.call(xAxis),
+					svg.select(".y.axis")
+						.transition().duration(750)
+						.call(yAxis),
+					svg.select(".line")
+						.transition().duration(750)
+						.attr("d", line(data))
+				)
+		}
+
+		//HELPERS
+		function leftMarginToBiggestYLabelWidth(element,y_axis,margin){
 				var y_format,widest_y_label;
 				//Set the margin left to display the longest label on y axis.
 				y_format = y_axis.scale().tickFormat(),
@@ -191,13 +304,11 @@
 					.text(y_format(y_axis.scale().ticks()[y_axis.scale().ticks().length -1])),
 				//Only if the given margin.left on the config object is smaller than the biggest label.
 				(margin.left < widest_y_label[0][0].offsetWidth * 1.5 )
-					? margin.left = (widest_y_label[0][0].offsetWidth * 1.5)
+					? (console.info('refactoring margin'),margin.left = (widest_y_label[0][0].offsetWidth * 1.5))
 					: false;
 				widest_y_label.remove();
-				return true;
+				return margin;
 			}
-
-		}
 
 		return {
 			restrict: 'E',
@@ -209,7 +320,12 @@
 				var d3isReady = d3Loader.d3();
 				scope.$watch('dataset',function(newData,oldData){
 					(newData)
-						? (d3isReady.then(function(){ $timeout(function(){drawBarChart(scope.config,newData,element,attrs);});}))
+						? (d3isReady.then(function(){ $timeout(function(){
+							var chartToDraw = eval(scope.config.chartType);
+							(chartToDraw)
+								? chartToDraw(scope.config,newData,element,attrs)
+								: console.error('Invalid chart name. Please adjust your chartType parameter.');
+						});}))
 						: false;
 				});
 			}
