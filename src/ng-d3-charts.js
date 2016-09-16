@@ -48,40 +48,65 @@
 
 	mod.factory('chartConfig',function(){
 
+		//Axis configuration
+
+
 		var chartConfig = function(config){
+
 			this.chartType = config.chartType || null;
 
 			//Layout configuration
 			this.margin = config.margin || {top: 30, right: 30, bottom: 30, left: 30};
-			this.barPadding = config.barPadding || .5;
-			this.barOuterPadding = config.barOuterPadding || .2;
 
-			//Axis configuration
-			this.showXaxis = config.showXaxis || true;
-			this.showYaxis = config.showYaxis || true;
+			//Axis Configuration
+			var xAxisConst = function(config){
+				this.showAxis        = (config.showAxis == false) ? false : true;
+				this.scale 	         = config.scale || 'd3.time.scale().range([0, width])';
+				/**** barChart specific ****/
+				this.barPadding 	 = config.barPadding || .5;
+				this.barOuterPadding = config.barOuterPadding || 0;
+			};
+
+			var yAxisConst = function(config){
+				this.showAxis	= (config.showAxis == false) ? false : true;
+				this.scale 		= config.scale || 'd3.scale.linear().range([height, 0])';
+			};
+
+			this.xAxis =  new xAxisConst(config.xAxis);
+			this.yAxis =  new yAxisConst(config.yAxis);
 
 			//Basic style configuration
+			/**** barChart specific ****/
 			this.barColor = config.barColor || '#3498DB';
 			this.bakcgroundColor = config.bakcgroundColor || 'white';
 
 			//Animation configuration
+			/**** barChart specific ****/
 			this.delayedEntrance = config.delayedEntrance || 100;
 		};
 
+		chartConfig.prototype.yAxisConst = function(config){
+			this.showAxis	= config.showAxis || true;
+			this.scale 		= config.scale || 'd3.scale.linear().range([height, 0])';
+
+			return this;
+		};
+
 		return chartConfig;
+
 	});
 
 	mod.directive('ngBarChart', ['d3Loader','$timeout', function(d3Loader,$timeout) {
 
 		function barChart(config,data,element,attrs){
 
+			console.log(config);
+
 			var margin = config.margin,
 				full_width = attrs.$$element[0].parentNode.clientWidth,
 				full_height= attrs.$$element[0].parentNode.offsetHeight,
 				width = full_width - margin.left - margin.right,
 				height = full_height - margin.top - margin.bottom,
-				bar_padding = config.barPadding,
-				bar_outer_padding = config.barOuterPadding,
 				barColor = config.barColor,
 				backgroundColor = config.bakcgroundColor,
 				colorScale;
@@ -91,11 +116,11 @@
 				? colorScale = eval(config.barColor)
 				: false;
 
+			/**** No custom x for now ****/
 			var x = d3.scale.ordinal()
-				.rangeRoundBands([0,width],bar_padding,bar_outer_padding);
+				.rangeRoundBands([0,width],config.xAxis.barPadding,config.xAxis.barOuterPadding);
 
-			var y = d3.scale.linear()
-				.range([(height),0]);
+			var y = eval(config.yAxis.scale);
 
 			var x_axis = d3.svg.axis()
 				.scale(x)
@@ -121,7 +146,7 @@
 					.select('svg')
 					.select('g')[0][0] == null;
 
-			(config.showYaxis)
+			(config.yAxis.showAxis)
 				? margin = leftMarginToBiggestYLabelWidth(element,y_axis,margin)
 				: false;
 
@@ -182,8 +207,8 @@
 					initial=false)
 				: false;
 
-			(config.showXaxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis) : false;
-			(config.showYaxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis) : false;
+			(config.xAxis.showAxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis) : false;
+			(config.yAxis.showAxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis) : false;
 
 		}
 
@@ -195,11 +220,8 @@
 				width = full_width - margin.left - margin.right,
 				height = full_height - margin.top - margin.bottom;
 
-			var x = d3.scale.linear()
-				.range([0, width]);
-
-			var y = d3.scale.linear()
-				.range([height, 0]);
+			var x = eval(config.xAxis.scale);
+			var y = eval(config.yAxis.scale);
 
 			var xAxis = d3.svg.axis()
 				.scale(x)
@@ -226,7 +248,7 @@
 
 			var x_axis_node, y_axis_node, initial, svg;
 
-			(config.showYaxis)
+			(config.yAxis.showAxis)
 				? margin = leftMarginToBiggestYLabelWidth(element, yAxis, margin)
 				: false;
 
