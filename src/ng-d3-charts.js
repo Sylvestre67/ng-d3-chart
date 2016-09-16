@@ -55,8 +55,8 @@
 			this.barOuterPadding = config.barOuterPadding || .2;
 
 			//Axis configuration
-			this.showXaxis = true;
-			this.showYaxis = false;
+			this.showXaxis = config.showXaxis || true;
+			this.showYaxis = config.showYaxis || true;
 
 			//Basic style configuration
 			this.barColor = config.barColor || '#3498DB';
@@ -81,7 +81,13 @@
 				bar_padding = config.barPadding,
 				bar_outer_padding = config.barOuterPadding,
 				barColor = config.barColor,
-				backgroundColor = config.bakcgroundColor;
+				backgroundColor = config.bakcgroundColor,
+				colorScale;
+
+			//If color_scale is provided
+			(config.barColor.indexOf('d3.scale') > -1)
+				? colorScale = eval(config.barColor)
+				: false;
 
 			var x = d3.scale.ordinal()
 				.rangeRoundBands([0,width],bar_padding,bar_outer_padding);
@@ -137,8 +143,12 @@
 
 			bar_nodes.enter().append("rect")
 				.attr("class", "bar")
-				.style('fill',function(d){ return barColor; })
-					.attr("y", function(d) { return y(0); });
+				.attr("y", function(d) { return y(0); });
+
+			bar_nodes.style('fill',function(d,i){ return (colorScale != undefined)
+						? colorScale(i)
+						: barColor;
+				});
 
 			bar_nodes.transition().duration(300)
 				.attr("x", function(d) { return x(d.x); })
