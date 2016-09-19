@@ -58,15 +58,36 @@
 			//Axis Configuration
 			var xAxisConst = function(config){
 				this.showAxis        = (config.showAxis == false) ? false : true;
-				this.scale 	         = config.scale || 'd3.time.scale().range([0, width])';
+				this.scale 	         = config.scale || 'd3.scale.linear().range([0, width])';
+				this.orient  		 = config.orient || 'bottom';
+
+				/**** Ticks configuration ****/
+				this.ticks           = config.ticks || null;
+				this.tickSize        = config.tickSize || 6;
+				this.outerTickSize   = config.outerTickSize || 0;
+				this.innerTickSize   = config.innerTickSize || 6;
+				this.tickPadding 	 = config.tickPadding || 3;
+				this.tickFormat      = config.tickFormat || null;
+				this.tickValues      = config.tickValues|| null;
+
 				/**** barChart specific ****/
 				this.barPadding 	 = config.barPadding || .5;
 				this.barOuterPadding = config.barOuterPadding || 0;
 			};
 
 			var yAxisConst = function(config){
-				this.showAxis	= (config.showAxis == false) ? false : true;
-				this.scale 		= config.scale || 'd3.scale.linear().range([height, 0])';
+				this.showAxis	     = (config.showAxis == false) ? false : true;
+				this.scale 		     = config.scale || 'd3.scale.linear().range([height, 0])';
+				this.orient  		 = config.orient || 'left';
+
+				/**** Ticks configuration ****/
+				this.ticks           = config.ticks || null;
+				this.tickSize        = config.tickSize || 6;
+				this.outerTickSize   = config.outerTickSize || 0;
+				this.innerTickSize   = config.innerTickSize || 6;
+				this.tickPadding 	 = config.tickPadding || 3;
+				this.tickFormat      = config.tickFormat || null;
+				this.tickValues      = config.tickValues|| null;
 			};
 
 			this.xAxis =  new xAxisConst(config.xAxis);
@@ -80,13 +101,6 @@
 			//Animation configuration
 			/**** barChart specific ****/
 			this.delayedEntrance = config.delayedEntrance || 100;
-		};
-
-		chartConfig.prototype.yAxisConst = function(config){
-			this.showAxis	= config.showAxis || true;
-			this.scale 		= config.scale || 'd3.scale.linear().range([height, 0])';
-
-			return this;
 		};
 
 		return chartConfig;
@@ -119,14 +133,25 @@
 
 			var x_axis = d3.svg.axis()
 				.scale(x)
-				.outerTickSize(0)
-				.orient('bottom');
+				.orient(config.xAxis.orient)
+				.ticks(eval(config.xAxis.ticks))
+				.tickSize(config.xAxis.tickSize)
+				.outerTickSize(config.xAxis.outerTickSize)
+				.innerTickSize(config.xAxis.innerTickSize)
+				.tickPadding(config.xAxis.tickPadding)
+				.tickFormat((config.xAxis.tickFormat) ? eval(config.xAxis.tickFormat) : null)
+				.tickValues(eval(config.xAxis.tickValues));
 
 			var y_axis = d3.svg.axis()
 				.scale(y)
-				.tickSize(6)
-				.outerTickSize(0)
-				.orient("left");
+				.orient(config.yAxis.orient)
+				.ticks(eval(config.yAxis.ticks))
+				.tickSize(config.yAxis.tickSize)
+				.outerTickSize(config.yAxis.outerTickSize)
+				.innerTickSize(config.yAxis.innerTickSize)
+				.tickPadding(config.yAxis.tickPadding)
+				.tickFormat((config.yAxis.tickFormat) ? eval(config.yAxis.tickFormat) : null)
+				.tickValues(eval(config.yAxis.tickValues));
 
 			// Set up x_axis with non-numeric values.
 			var x_domain = [];
@@ -220,23 +245,29 @@
 
 			var xAxis = d3.svg.axis()
 				.scale(x)
-				.tickSize(6)
-				.outerTickSize(0)
-				.orient("bottom");
+				.orient(config.xAxis.orient)
+				.ticks(eval(config.xAxis.ticks))
+				.tickSize(config.xAxis.tickSize)
+				.outerTickSize(config.xAxis.outerTickSize)
+				.innerTickSize(config.xAxis.innerTickSize)
+				.tickPadding(config.xAxis.tickPadding)
+				.tickFormat((config.xAxis.tickFormat) ? eval(config.xAxis.tickFormat) : null)
+				.tickValues(eval(config.xAxis.tickValues));
 
-			x.domain(d3.extent(data, function (d) {
-				return d.x;
-			}));
+			x.domain(d3.extent(data, function (d) { return d.x; }));
 
 			var yAxis = d3.svg.axis()
 				.scale(y)
-				.tickSize(6)
-				.outerTickSize(0)
-				.orient("left");
+				.orient(config.yAxis.orient)
+				.ticks(eval(config.yAxis.ticks))
+				.tickSize(config.yAxis.tickSize)
+				.outerTickSize(config.yAxis.outerTickSize)
+				.innerTickSize(config.yAxis.innerTickSize)
+				.tickPadding(config.yAxis.tickPadding)
+				.tickFormat((config.yAxis.tickFormat) ? eval(config.yAxis.tickFormat) : null)
+				.tickValues(eval(config.yAxis.tickValues));
 
-			y.domain(d3.extent(data, function (d) {
-				return d.y;
-			}));
+			y.domain(d3.extent(data, function (d) { return d.y;	}));
 
 			var svgNotExist = d3.select(element[0]).select('svg')
 					.select('g')[0][0] == null;
