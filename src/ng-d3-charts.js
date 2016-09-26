@@ -88,6 +88,10 @@
 				this.tickPadding 	 = config.tickPadding || 3;
 				this.tickFormat      = config.tickFormat || null;
 				this.tickValues      = config.tickValues|| null;
+
+				/**** barChart specific ****/
+				this.barPadding 	 = config.barPadding || .5;
+				this.barOuterPadding = config.barOuterPadding || 0;
 			};
 
 			this.xAxis =  new xAxisConst(config.xAxis);
@@ -115,7 +119,7 @@
 		*
 		* **********/
 
-		function barChart(config,data,element,attrs){
+		function barChartVertical(config,data,element,attrs){
 
 			var margin = config.margin,
 				full_width = attrs.$$element[0].parentNode.clientWidth,
@@ -238,6 +242,131 @@
 
 		}
 
+		function barChartHorizontal(config,data,element,attrs){
+
+			var margin = config.margin,
+				full_width = attrs.$$element[0].parentNode.clientWidth,
+				full_height = attrs.$$element[0].parentNode.offsetHeight,
+				width = full_width - margin.left - margin.right,
+				height = full_height - margin.top - margin.bottom;
+
+			var x = eval(config.xAxis.scale);
+			x.domain([0,d3.max(data, function (d) { return d.x; })]);
+
+			var y = d3.scale.ordinal()
+				.rangeRoundBands([0,height],config.yAxis.barPadding,config.yAxis.barOuterPadding);
+
+			var y_domain = [];
+			data.map(function(d){y_domain.push(d.y)});
+			y.domain(y_domain);
+
+			var xAxis = d3.svg.axis()
+				.scale(x)
+				.orient(config.xAxis.orient)
+				.ticks(eval(config.xAxis.ticks))
+				.tickSize(config.xAxis.tickSize)
+				.outerTickSize(config.xAxis.outerTickSize)
+				.innerTickSize(config.xAxis.innerTickSize)
+				.tickPadding(config.xAxis.tickPadding)
+				.tickFormat((config.xAxis.tickFormat) ? eval(config.xAxis.tickFormat) : null)
+				.tickValues(eval(config.xAxis.tickValues));
+
+			var yAxis = d3.svg.axis()
+				.scale(y)
+				.orient(config.yAxis.orient)
+				.ticks(eval(config.yAxis.ticks))
+				.tickSize(config.yAxis.tickSize)
+				.outerTickSize(config.yAxis.outerTickSize)
+				.innerTickSize(config.yAxis.innerTickSize)
+				.tickPadding(config.yAxis.tickPadding)
+				.tickFormat((config.yAxis.tickFormat) ? eval(config.yAxis.tickFormat) : null)
+				.tickValues(eval(config.yAxis.tickValues));
+
+			var colorScale = d3.scale.category20();
+
+			var svgNotExist = d3.select(element[0]).select('svg')
+					.select('g')[0][0] == null;
+
+			var x_axis_node, y_axis_node, initial, svg;
+
+			/*(config.yAxis.showAxis)
+				? margin = leftMarginToBiggestYLabelWidth(element, yAxis, margin)
+				: false;*/
+
+			(svgNotExist)
+				? (svg = d3.select(element[0])
+					.append("svg:svg")
+					.attr("class", "line-chart")
+					.attr("width", full_width)
+					.attr("height", full_height)
+					.append("svg:g")
+					.attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
+
+					initial = true
+			)
+				: svg = d3.select(element[0]).select('svg g');
+
+			(initial)
+				? (
+					x_axis_node = svg.append("g")
+						.attr("class", "x axis")
+						.attr("transform", "translate(0," + (height) + ")")
+						.call(xAxis),
+
+					x_axis_node.append("text")
+						.style("text-anchor", "end")
+						.style("font-size", ".6em")
+						.attr("dx", (width - 5) + "px")
+						.attr("dy", "1.5em")
+						.text(config.XlabelText),
+
+					y_axis_node = svg.append("g")
+						.attr("class", "y axis")
+						.call(yAxis),
+
+					y_axis_node.append("text")
+						.attr("class", "axis-label")
+						.attr("transform", "rotate(-90)")
+						.attr("y", 6)
+						.attr("dy", ".6em")
+						.style("text-anchor", "end")
+						.style("font-size", ".6em")
+						.text(config.YlabelText),
+
+					initial = false
+				)
+				: (
+					svg.select(".x.axis")
+						.transition().duration(750)
+						.call(xAxis),
+					svg.select(".y.axis")
+						.transition().duration(750)
+						.call(yAxis)
+				);
+
+			var bar_nodes = svg.selectAll(".bar")
+				.data(data);
+
+			bar_nodes.exit().remove();
+
+			bar_nodes.enter().append("rect")
+				.attr("class", "bar")
+				.attr("x", 0)
+				.attr("y", function(d,i) { return y(d.y); });
+
+			bar_nodes.style('fill',function(d,i){ return (colorScale != undefined)
+				? colorScale(i)
+				: barColor;
+			});
+
+			bar_nodes.transition().duration(300)
+				.attr("height", y.rangeBand())
+				.attr("width", function(d) { return x(d.x); })
+				.attr("y", function(d,i) { return y(d.y); })
+				.delay(function(d,i) { return i * config.delayedEntrance; });
+
+		}
+
 		function lineChart(config,data,element,attrs) {
 
 			var margin = config.margin,
@@ -348,8 +477,6 @@
 						.attr("d", line(data))
 				)
 		}
-
-
 
 		/***********
 		*
