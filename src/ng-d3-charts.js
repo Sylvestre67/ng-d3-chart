@@ -109,6 +109,12 @@
 
 	mod.directive('ngBarChart', ['d3Loader','$timeout', function(d3Loader,$timeout) {
 
+		/***********
+		*
+		* Chart functions
+		*
+		* **********/
+
 		function barChart(config,data,element,attrs){
 
 			var margin = config.margin,
@@ -343,7 +349,14 @@
 				)
 		}
 
-		//HELPERS
+
+
+		/***********
+		*
+		* Utils
+		*
+		* **********/
+
 		function leftMarginToBiggestYLabelWidth(element,y_axis,margin){
 				var y_format,widest_y_label;
 				//Set the margin left to display the longest label on y axis.
@@ -357,6 +370,12 @@
 				widest_y_label.remove();
 				return margin;
 			}
+
+		/***********
+		*
+		* Directive
+		*
+		* **********/
 
 		return {
 			restrict: 'E',
