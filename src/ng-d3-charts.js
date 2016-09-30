@@ -436,35 +436,38 @@
 
 			(initial)
 				? (
-				x_axis_node = svg.append("g")
-					.attr("class", "x axis")
-					.attr("transform", "translate(0," + (height) + ")")
-					.call(xAxis),
+					((config.xAxis.showAxis) ?
+						(x_axis_node = svg.append("g")
+							.attr("class", "x axis")
+							.attr("transform", "translate(0," + (height) + ")")
+							.call(xAxis),
 
-				x_axis_node.append("text")
-					.style("text-anchor", "end")
-					.style("font-size", ".6em")
-					.attr("dx", (width - 5) + "px")
-					.attr("dy", "1.5em")
-					.text(config.XlabelText),
+							x_axis_node.append("text")
+								.style("text-anchor", "end")
+								.style("font-size", ".6em")
+								.attr("dx", (width - 5) + "px")
+								.attr("dy", "1.5em")
+								.text(config.XlabelText))
+						: null),
 
-				y_axis_node = svg.append("g")
-					.attr("class", "y axis")
-					.call(yAxis),
+					((config.yAxis.showAxis) ? (
+						y_axis_node = svg.append("g")
+							.attr("class", "y axis")
+							.call(yAxis),
+						y_axis_node.append("text")
+							.attr("class", "axis-label")
+							.attr("transform", "rotate(-90)")
+							.attr("y", 6)
+							.attr("dy", ".6em")
+							.style("text-anchor", "end")
+							.style("font-size", ".6em")
+							.text(config.YlabelText))
+						: null),
 
-				y_axis_node.append("text")
-					.attr("class", "axis-label")
-					.attr("transform", "rotate(-90)")
-					.attr("y", 6)
-					.attr("dy", ".6em")
-					.style("text-anchor", "end")
-					.style("font-size", ".6em")
-					.text(config.YlabelText),
-
-				svg.append("path")
-					.attr("class", "line")
-					.attr("d", line(data))
-				)
+					svg.append("path")
+						.attr("class", "line")
+						.attr("d", line(data))
+					)
 				: (
 					svg.select(".x.axis")
 						.transition().duration(750)
