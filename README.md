@@ -1,5 +1,7 @@
 # Angular directives for d3 charts.
 
+Check out the [demo](http://ng-d3-chart.herokuapp.com/).
+
 This repo is for distribution on `npm` and `bower`.
 
 ## Install
