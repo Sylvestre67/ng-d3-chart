@@ -481,6 +481,92 @@
 				)
 		}
 
+		function scatterPlot(config,data,element,attrs){
+
+			var margin = config.margin,
+				full_width = attrs.$$element[0].parentNode.clientWidth,
+				full_height= attrs.$$element[0].parentNode.offsetHeight,
+				width = full_width - margin.left - margin.right,
+				height = full_height - margin.top - margin.bottom;
+
+			var x = d3.scale.linear().range([0,width]);
+			var y = d3.scale.linear().range([height,0]);
+			var color_scale = d3.scale.category20();
+
+			var x_axis = d3.svg.axis()
+				.scale(x)
+				.orient(config.xAxis.orient)
+				.ticks(eval(config.xAxis.ticks))
+				.tickSize(config.xAxis.tickSize)
+				.outerTickSize(config.xAxis.outerTickSize)
+				.innerTickSize(config.xAxis.innerTickSize)
+				.tickPadding(config.xAxis.tickPadding)
+				.tickFormat((config.xAxis.tickFormat) ? eval(config.xAxis.tickFormat) : null)
+				.tickValues(eval(config.xAxis.tickValues));
+
+			var y_axis = d3.svg.axis()
+				.scale(y)
+				.orient(config.yAxis.orient)
+				.ticks(eval(config.yAxis.ticks))
+				.tickSize(config.yAxis.tickSize)
+				.outerTickSize(config.yAxis.outerTickSize)
+				.innerTickSize(config.yAxis.innerTickSize)
+				.tickPadding(config.yAxis.tickPadding)
+				.tickFormat((config.yAxis.tickFormat) ? eval(config.yAxis.tickFormat) : null)
+				.tickValues(eval(config.yAxis.tickValues));
+
+			//Set up axis
+			var max_y = d3.max(data,function(d){ return d.y; });
+			y.domain([0,max_y * 1.1]);
+
+			var max_x = d3.max(data,function(d){ return d.x; });
+			x.domain([0,max_x * 1.1]);
+
+			var svgNotExist =  d3.select(element[0])
+					.select('svg')
+					.select('g')[0][0] == null;
+
+			(config.yAxis.showAxis)
+				? margin = leftMarginToBiggestYLabelWidth(element,y_axis,margin)
+				: false;
+
+			var svg;
+
+			(svgNotExist)
+				? (svg = d3.select(element[0])
+					.append("svg:svg")
+					.attr("width", full_width)
+					.attr("height", full_height)
+					.attr("class","bar-chart")
+						.append("svg:g")
+					.attr("transform", "translate(" + margin.left + "," + margin.top +")")
+				)
+				: svg = d3.select(element[0]).select('svg g');
+
+			var dot = svg.selectAll('.dot')
+				.data(data);
+
+			dot.enter().append('g')
+				.attr('transform',function(d){ return 'translate(' + x(d.x) + ',' + height + ')' })
+				.attr('class','dot')
+					.append('circle').attr('r',2).attr('fill',function(d){ return color_scale(d.cat) });
+
+			dot.exit().transition().duration(100)
+				.remove();
+
+			dot.transition().duration(500)
+				.attr('transform',function(d){ return 'translate(' + x(d.x) + ',' + y(d.y) + ')' });
+
+			(svg.selectAll('.x')[0].length === 0 && (config.xAxis.showAxis))
+				? svg.append('g').attr('transform','translate(0,' + height + ')').attr('class','x axis').transition().duration(250).call(x_axis)
+				: svg.selectAll('.x').transition().duration(250).call(x_axis);
+
+			(svg.selectAll('.y')[0].length === 0 && (config.yAxis.showAxis))
+				? svg.append('g').attr('class','y axis').transition().duration(250).call(y_axis)
+				: svg.selectAll('.y').transition().duration(250).call(y_axis);
+
+		}
+
 		/***********
 		*
 		* Utils
