@@ -46,11 +46,14 @@
 
 	}]);
 
-	mod.factory('chartConfig',function(){
+	mod.factory('chartConfig',[function(){
 
 		var chartConfig = function(config){
 
 			this.chartType = config.chartType || null;
+			this.xMark = config.xMark || 'x';
+			this.yDimension = config.yDimension || 'y';
+			this.orderBy = config.orderBy || null;
 
 			//Layout configuration
 			this.margin = config.margin || {top: 30, right: 30, bottom: 30, left: 30};
@@ -109,7 +112,7 @@
 
 		return chartConfig;
 
-	});
+	}]);
 
 	mod.directive('ngBarChart', ['d3Loader','$timeout', function(d3Loader,$timeout) {
 
@@ -123,12 +126,16 @@
 
 			var margin = config.margin,
 				full_width = attrs.$$element[0].parentNode.clientWidth,
-				full_height= attrs.$$element[0].parentNode.offsetHeight,
+				full_height= (attrs.$$element[0].parentNode.offsetHeight) * .95,
 				width = full_width - margin.left - margin.right,
 				height = full_height - margin.top - margin.bottom,
 				barColor = config.barColor,
 				backgroundColor = config.bakcgroundColor,
 				colorScale;
+
+			//Support for full width ticks, grid on the whole width of chart.
+			var xAxis_innerTickSize = (config.xAxis.innerTickSize === 'full_width') ? (- width) : config.xAxis.innerTickSize;
+			var yAxis_innerTickSize = (config.yAxis.innerTickSize === 'full_width') ? (- width) : config.yAxis.innerTickSize;
 
 			//If color_scale is provided
 			(config.barColor.indexOf('d3.scale') > -1)
@@ -147,7 +154,7 @@
 				.ticks(eval(config.xAxis.ticks))
 				.tickSize(config.xAxis.tickSize)
 				.outerTickSize(config.xAxis.outerTickSize)
-				.innerTickSize(config.xAxis.innerTickSize)
+				.innerTickSize(xAxis_innerTickSize)
 				.tickPadding(config.xAxis.tickPadding)
 				.tickFormat((config.xAxis.tickFormat) ? eval(config.xAxis.tickFormat) : null)
 				.tickValues(eval(config.xAxis.tickValues));
@@ -158,7 +165,7 @@
 				.ticks(eval(config.yAxis.ticks))
 				.tickSize(config.yAxis.tickSize)
 				.outerTickSize(config.yAxis.outerTickSize)
-				.innerTickSize(config.yAxis.innerTickSize)
+				.innerTickSize(yAxis_innerTickSize)
 				.tickPadding(config.yAxis.tickPadding)
 				.tickFormat((config.yAxis.tickFormat) ? eval(config.yAxis.tickFormat) : null)
 				.tickValues(eval(config.yAxis.tickValues));
@@ -167,6 +174,7 @@
 			var x_domain = [];
 			angular.forEach(data,function(d,i){	x_domain.push(d.x); });
 			x.domain(x_domain);
+
 
 			//Set up y_axis
 			var max_y = d3.max(data,function(d){ return d.y; });
@@ -193,6 +201,13 @@
 					initial = true
 				)
 				: svg = d3.select(element[0]).select('svg g');
+
+			(initial) ? (
+				y_axis_node = svg.append('g')
+					.attr('class','axis y')
+					.attr('transform', 'translate(' + 0 + ',' + 0 + ')'),
+					initial=false)
+				: false;
 
 			var bar_nodes = svg.selectAll(".bar")
 				.data(data);
@@ -223,21 +238,16 @@
 				.attr("y",height)
 				.attr("x",0)
 				.attr("width",width)
-				.attr("height",margin.bottom)
+				.attr("height",margin.bottom )
 				.style("fill", backgroundColor);
 
 			x_axis_node = svg.append('g')
 				.attr('class','axis x')
 				.attr('transform', 'translate(' + 0 + ',' + height + ')');
 
-			(initial) ? (
-				y_axis_node = svg.append('g')
-					.attr('class','axis y')
-					.attr('transform', 'translate(' + 0 + ',' + 0 + ')'),
-					initial=false)
-				: false;
-
-			(config.xAxis.showAxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis) : false;
+			(config.xAxis.showAxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis)
+										 .selectAll('.tick text').call(wrap, x.rangeBand() * 1.1)
+									: false;
 			(config.yAxis.showAxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis) : false;
 
 		}
@@ -251,13 +261,13 @@
 				height = full_height - margin.top - margin.bottom;
 
 			var x = eval(config.xAxis.scale);
-			x.domain([0,d3.max(data, function (d) { return d.x; })]);
+			x.domain([0,d3.max(data, function (d) { return d[config.xMark]; })]);
 
 			var y = d3.scale.ordinal()
 				.rangeRoundBands([0,height],config.yAxis.barPadding,config.yAxis.barOuterPadding);
 
 			var y_domain = [];
-			data.map(function(d){y_domain.push(d.y)});
+			data.map(function(d,i){y_domain.push(i)});
 			y.domain(y_domain);
 
 			var xAxis = d3.svg.axis()
@@ -282,16 +292,16 @@
 				.tickFormat((config.yAxis.tickFormat) ? eval(config.yAxis.tickFormat) : null)
 				.tickValues(eval(config.yAxis.tickValues));
 
-			var colorScale = d3.scale.category20();
+			var colorScale;
+			//If color_scale is provided
+			(config.barColor.indexOf('d3.scale') > -1)
+				? colorScale = eval(config.barColor)
+				: false;
 
 			var svgNotExist = d3.select(element[0]).select('svg')
 					.select('g')[0][0] == null;
 
 			var x_axis_node, y_axis_node, initial, svg;
-
-			/*(config.yAxis.showAxis)
-				? margin = leftMarginToBiggestYLabelWidth(element, yAxis, margin)
-				: false;*/
 
 			(svgNotExist)
 				? (svg = d3.select(element[0])
@@ -345,25 +355,45 @@
 				);
 
 			var bar_nodes = svg.selectAll(".bar")
-				.data(data);
+				.data(data.sort(function(a, b){ return b.y - a.y; }));
 
 			bar_nodes.exit().remove();
 
 			bar_nodes.enter().append("rect")
 				.attr("class", "bar")
 				.attr("x", 0)
-				.attr("y", function(d,i) { return y(d.y); });
+				.attr("y", function(d,i) { return y(i); });
+
 
 			bar_nodes.style('fill',function(d,i){ return (colorScale != undefined)
-				? colorScale(i)
+				? colorScale(d[config.xMark])
 				: barColor;
 			});
 
 			bar_nodes.transition().duration(300)
 				.attr("height", y.rangeBand())
-				.attr("width", function(d) { return x(d.x); })
-				.attr("y", function(d,i) { return y(d.y); })
+				.attr("width", function(d) { return x(d[config.xMark]); })
+				.attr("y", function(d,i) { return y(i); })
 				.delay(function(d,i) { return i * config.delayedEntrance; });
+
+			// Labelling to use cat instead of i
+			var labels = svg.selectAll(".label")
+				.data(data.sort(function(a, b){ return b.y - a.y; }));
+
+			labels.exit().remove();
+
+			labels.enter()
+				.append('g').attr('class','label')
+				.attr('transform', function(d,i) { return 'translate(' + -5 + ',' + (y(i) + y.rangeBand() *.5 + 3 ) + ')' });
+
+			labels.transition().duration(300)
+				.attr('transform', function(d,i) { return 'translate(' + -5 + ',' + (y(i) + y.rangeBand() *.5 + 3 ) + ')' });
+
+			svg.selectAll('.label text').remove();
+
+			labels.append('text').style('text-anchor','end');
+
+			svg.selectAll('.label text').transition().text(function(d,i){ return d.x });
 
 		}
 
@@ -587,6 +617,34 @@
 				return margin;
 			}
 
+		/**
+		 * From: http://bl.ocks.org/mbostock/7555321
+		 * **/
+
+		function wrap(text, width) {
+		  text.each(function() {
+			var text = d3.select(this),
+				words = text.text().split(/\s+/).reverse(),
+				word,
+				line = [],
+				lineNumber = 0,
+				lineHeight = 1.1, // ems
+				y = text.attr("y"),
+				dy = parseFloat(text.attr("dy")),
+				tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+			while (word = words.pop()) {
+			  line.push(word);
+			  tspan.text(line.join(" "));
+			  if (tspan.node().getComputedTextLength() > width) {
+				line.pop();
+				tspan.text(line.join(" "));
+				line = [word];
+				tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+			  }
+			}
+		  });
+		}
+
 		/***********
 		*
 		* Directive
@@ -601,7 +659,8 @@
 			},
 			link: function(scope,element,attrs){
 				var d3isReady = d3Loader.d3();
-				scope.$watch('dataset',function(newData,oldData){
+				$timeout(function(){
+					scope.$watch('dataset',function(newData,oldData){
 					(newData)
 						? (d3isReady.then(function(){ $timeout(function(){
 							var chartToDraw = eval(scope.config.chartType);
@@ -610,7 +669,9 @@
 								: console.error('Invalid chart name. Please adjust your chartType parameter.');
 						});}))
 						: false;
-				});
+					});
+				})
+
 			}
 		};
 	}]);
