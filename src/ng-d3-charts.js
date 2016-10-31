@@ -50,10 +50,15 @@
 
 		var chartConfig = function(config){
 
-			this.chartType = config.chartType || null;
-			this.xMark = config.xMark || 'x';
-			this.yDimension = config.yDimension || 'y';
-			this.orderBy = config.orderBy || null;
+			this.chartType    = config.chartType || null;
+			this.xMark        = config.xMark || 'x';
+			this.yDimension   = config.yDimension || 'y';
+			this.orderBy      = config.orderBy || null;
+
+			this.markClickCallback  = config.markClickCallback || null;
+
+			this.addLabelToMark     = config.addLabelToMark || false;
+			this.markLabelFormat    = config.markLabelFormat  || false;
 
 			//Layout configuration
 			this.margin = config.margin || {top: 30, right: 30, bottom: 30, left: 30};
@@ -133,6 +138,9 @@
 				backgroundColor = config.bakcgroundColor,
 				colorScale;
 
+			// Mark labels
+			var bar_label_format = eval(config.markLabelFormat);
+
 			//Support for full width ticks, grid on the whole width of chart.
 			var xAxis_innerTickSize = (config.xAxis.innerTickSize === 'full_width') ? (- width) : config.xAxis.innerTickSize;
 			var yAxis_innerTickSize = (config.yAxis.innerTickSize === 'full_width') ? (- width) : config.yAxis.innerTickSize;
@@ -172,12 +180,11 @@
 
 			// Set up x_axis with non-numeric values.
 			var x_domain = [];
-			angular.forEach(data,function(d,i){	x_domain.push(d.x); });
+			angular.forEach(data,function(d,i){	x_domain.push(d[config.xMark]); });
 			x.domain(x_domain);
 
-
 			//Set up y_axis
-			var max_y = d3.max(data,function(d){ return d.y; });
+			var max_y = d3.max(data,function(d){ return d[config.yDimension]; });
 			y.domain([0,max_y * 1.1]);
 
 			var svgNotExist =  d3.select(element[0])
@@ -209,26 +216,40 @@
 					initial=false)
 				: false;
 
-			var bar_nodes = svg.selectAll(".bar")
+			var bar_nodes = svg.selectAll('.bar-node')
 				.data(data);
 
 			bar_nodes.exit().remove();
 
-			bar_nodes.enter().append("rect")
+			var bar_node = bar_nodes.enter().append('g')
+				.attr('class','bar-node');
+
+			var bar = bar_node.append("rect")
 				.attr("class", "bar")
+				.attr("class", (config.markClickCallback) ? "clickable" : false)
 				.attr("y", function(d) { return y(0); });
 
-			bar_nodes.style('fill',function(d,i){ return (colorScale != undefined)
-						? colorScale(i)
-						: barColor;
-				});
+			bar.style('fill',function(d,i){ return (colorScale != undefined)
+				? colorScale(i)
+				: barColor;
+			});
 
-			bar_nodes.transition().duration(300)
-				.attr("x", function(d) { return x(d.x); })
-				.attr("y", function(d,i) { return y(d.y); })
+			bar.transition().duration(300)
+				.attr("x", function(d) { return x(d[config.xMark]); })
+				.attr("y", function(d,i) { return y(d[config.yDimension]); })
 				.attr("width", x.rangeBand())
-						.attr("height", function(d) { return height - y(d.y); })
+						.attr("height", function(d) { return height - y(d[config.yDimension]); })
 						.delay(function(d,i) { return i*config.delayedEntrance; });
+
+			(config.addLabelToMark)
+				 ? bar_node.append('text')
+					.style('opacity',0)
+					.attr('class','bar-label')
+					.attr("x", function(d) { return x(d[config.xMark]) + x.rangeBand()*.25; })
+					.attr("y", function(d,i) { return y(d[config.yDimension]) - 5; })
+					.text(function(d){ return bar_label_format(d[config.yDimension])})
+						.transition().duration(300).style('opacity',1).delay(function(d,i) { return i*config.delayedEntrance; })
+				 : false;
 
 			//Remove and redraw x_axis because bottom to top animation.
 			svg.select('.axis.x').remove();
@@ -248,7 +269,15 @@
 			(config.xAxis.showAxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis)
 										 .selectAll('.tick text').call(wrap, x.rangeBand() * 1.1)
 									: false;
-			(config.yAxis.showAxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis) : false;
+			(config.yAxis.showAxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis)
+									: false;
+
+			/**
+			 * Events
+			 * ***/
+			(config.markClickCallback)
+				? bar_nodes.on('click',function(){ eval(config.markClickCallback) })
+				: false;
 
 		}
 
@@ -259,6 +288,9 @@
 				full_height = attrs.$$element[0].parentNode.offsetHeight,
 				width = full_width - margin.left - margin.right,
 				height = full_height - margin.top - margin.bottom;
+
+			// Mark labels
+			var bar_label_format = eval(config.markLabelFormat);
 
 			var x = eval(config.xAxis.scale);
 			x.domain([0,d3.max(data, function (d) { return d[config.xMark]; })]);
@@ -306,7 +338,6 @@
 			(svgNotExist)
 				? (svg = d3.select(element[0])
 					.append("svg:svg")
-					.attr("class", "line-chart")
 					.attr("width", full_width)
 					.attr("height", full_height)
 					.append("svg:g")
@@ -354,27 +385,38 @@
 						.call(yAxis)
 				);
 
-			var bar_nodes = svg.selectAll(".bar")
+			var bar_nodes = svg.selectAll(".bar-node")
 				.data(data.sort(function(a, b){ return b.y - a.y; }));
 
 			bar_nodes.exit().remove();
 
-			bar_nodes.enter().append("rect")
+			var bar_node = bar_nodes.enter().append('g')
+				.attr('class','bar-node')
+				.attr('transform',function(d,i) { return 'translate(0,' + y(i) + ')'});
+
+			var bar = bar_node.append("rect")
 				.attr("class", "bar")
-				.attr("x", 0)
-				.attr("y", function(d,i) { return y(i); });
+				.attr("height", y.rangeBand());
 
-
-			bar_nodes.style('fill',function(d,i){ return (colorScale != undefined)
+			bar.style('fill',function(d,i){ return (colorScale != undefined)
 				? colorScale(d[config.xMark])
 				: barColor;
 			});
 
-			bar_nodes.transition().duration(300)
-				.attr("height", y.rangeBand())
+			bar.transition().duration(300)
 				.attr("width", function(d) { return x(d[config.xMark]); })
-				.attr("y", function(d,i) { return y(i); })
 				.delay(function(d,i) { return i * config.delayedEntrance; });
+
+			(config.addLabelToMark)
+				 ? bar_node.append('text')
+					.style('opacity',0)
+					.style('font-size','12px')
+					.attr('class','bar-label')
+					.attr("y", function(d) { return y.rangeBand() * .5 + 6; })
+					.attr("x", width + 5)
+					.text(function(d){ return bar_label_format(d[config.xMark])})
+						.transition().duration(300).style('opacity',1).delay(function(d,i) { return i*config.delayedEntrance; })
+				 : false;
 
 			// Labelling to use cat instead of i
 			var labels = svg.selectAll(".label")
@@ -393,7 +435,7 @@
 
 			labels.append('text').style('text-anchor','end');
 
-			svg.selectAll('.label text').transition().text(function(d,i){ return d.x });
+			svg.selectAll('.label text').transition().text(function(d,i){ return d[config.yDimension] });
 
 		}
 
@@ -663,6 +705,9 @@
 					scope.$watch('dataset',function(newData,oldData){
 					(newData)
 						? (d3isReady.then(function(){ $timeout(function(){
+
+							console.info('Initiating: ' + scope.config.chartType);
+
 							var chartToDraw = eval(scope.config.chartType);
 							(chartToDraw)
 								? chartToDraw(scope.config,newData,element,attrs)
