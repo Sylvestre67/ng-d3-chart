@@ -102,8 +102,17 @@
 				this.barOuterPadding = config.barOuterPadding || 0;
 			};
 
+			var bubbleConfig = function(config){
+				this.areaDimension  = config.areaDimension  || null;
+				this.colorDimension = config.colorDimension || null;
+			};
+
 			this.xAxis =  new xAxisConst(config.xAxis);
 			this.yAxis =  new yAxisConst(config.yAxis);
+
+			(config.bubbleConfig)
+				? this.bubbleConfig = new bubbleConfig(config.bubbleConfig)
+				: false;
 
 			//Basic style configuration
 			/**** barChart specific ****/
@@ -588,10 +597,10 @@
 				.tickValues(eval(config.yAxis.tickValues));
 
 			//Set up axis
-			var max_y = d3.max(data,function(d){ return d.y; });
+			var max_y = d3.max(data,function(d){ return d[config.yDimension]; });
 			y.domain([0,max_y * 1.1]);
 
-			var max_x = d3.max(data,function(d){ return d.x; });
+			var max_x = d3.max(data,function(d){ return d[config.xMark]; });
 			x.domain([0,max_x * 1.1]);
 
 			var svgNotExist =  d3.select(element[0])
@@ -619,7 +628,7 @@
 				.data(data);
 
 			dot.enter().append('g')
-				.attr('transform',function(d){ return 'translate(' + x(d.x) + ',' + height + ')' })
+				.attr('transform',function(d){ return 'translate(' + x(d[config.xMark]) + ',' + height + ')' })
 				.attr('class','dot')
 					.append('circle').attr('r',2).attr('fill',function(d){ return color_scale(d.cat) });
 
@@ -627,7 +636,7 @@
 				.remove();
 
 			dot.transition().duration(500)
-				.attr('transform',function(d){ return 'translate(' + x(d.x) + ',' + y(d.y) + ')' });
+				.attr('transform',function(d){ return 'translate(' + x(d[config.xMark]) + ',' + y(d[config.yDimension]) + ')' });
 
 			(svg.selectAll('.x')[0].length === 0 && (config.xAxis.showAxis))
 				? svg.append('g').attr('transform','translate(0,' + height + ')').attr('class','x axis').transition().duration(250).call(x_axis)
@@ -636,6 +645,102 @@
 			(svg.selectAll('.y')[0].length === 0 && (config.yAxis.showAxis))
 				? svg.append('g').attr('class','y axis').transition().duration(250).call(y_axis)
 				: svg.selectAll('.y').transition().duration(250).call(y_axis);
+
+		}
+
+		function bubbleChart(config,data,element,attrs){
+			var margin = config.margin,
+				full_width = attrs.$$element[0].parentNode.clientWidth,
+				full_height= attrs.$$element[0].parentNode.offsetHeight,
+				width = full_width - margin.left - margin.right,
+				height = full_height - margin.top - margin.bottom;
+
+			var x = d3.scale.ordinal().rangeRoundBands([0,width],config.xAxis.barPadding,config.xAxis.barOuterPadding);
+			var y = d3.scale.linear().range([height,0]);
+			var color_scale = d3.scale.category20();
+
+			var x_axis = d3.svg.axis()
+				.scale(x)
+				.orient(config.xAxis.orient)
+				.ticks(eval(config.xAxis.ticks))
+				.tickSize(config.xAxis.tickSize)
+				.outerTickSize(config.xAxis.outerTickSize)
+				.innerTickSize(config.xAxis.innerTickSize)
+				.tickPadding(config.xAxis.tickPadding)
+				.tickFormat((config.xAxis.tickFormat) ? eval(config.xAxis.tickFormat) : null)
+				.tickValues(eval(config.xAxis.tickValues));
+
+			var y_axis = d3.svg.axis()
+				.scale(y)
+				.orient(config.yAxis.orient)
+				.ticks(eval(config.yAxis.ticks))
+				.tickSize(config.yAxis.tickSize)
+				.outerTickSize(config.yAxis.outerTickSize)
+				.innerTickSize(config.yAxis.innerTickSize)
+				.tickPadding(config.yAxis.tickPadding)
+				.tickFormat((config.yAxis.tickFormat) ? eval(config.yAxis.tickFormat) : null)
+				.tickValues(eval(config.yAxis.tickValues));
+
+			//Set up axis
+			var max_y = d3.max(data,function(d){ return d[config.yDimension]; });
+			y.domain([0,max_y * 1.1]);
+			x.domain(data.map(function(object){ return object[config.xMark] } ));
+
+			// Define this axis here as it takes x.rangeBand into its argument.
+			var bubble_radius_scale = d3.scale.linear()
+				.range([0,x.rangeBand() * .5])
+				.domain([0,max_y]);
+
+			var bubble_color_scale = (config.colorScale) ? eval(config.colorScale) : false;
+
+			var svgNotExist =  d3.select(element[0])
+					.select('svg')
+					.select('g')[0][0] == null;
+
+			var mask,x_axis_node,y_axis_node,initial,svg;
+
+			(svgNotExist)
+				? (svg = d3.select(element[0])
+					.append("svg:svg")
+					.attr("width", full_width)
+					.attr("height", full_height)
+					.attr("class","bar-chart")
+						.append("svg:g")
+					.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
+					initial = true
+				)
+				: svg = d3.select(element[0]).select('svg g');
+
+			//svg.append('circle').attr('r',10).attr('fill','rgb(73, 163, 223)');
+
+			var mark_node = svg.selectAll('.mark_node').data(data);
+
+			mark_node.exit().remove();
+
+			mark_node.enter().append('g')
+				.attr('transform',function(d,i) { return 'translate(' + (x(d[config.xMark]) + x.rangeBand()*.5) + ',' + y(d[config.yDimension]) + ')'} )
+				.attr('class','mark_node');
+
+			var bubble = mark_node.append('circle')
+				.style('opacity', 0)
+				.attr('r', function(d,i){ return bubble_radius_scale(d[config.bubbleConfig.areaDimension]) })
+				.attr('fill',function(d,i){ return (bubble_color_scale) ? bubble_color_scale(config.colorDimension) : 'rgb(73, 163, 223)' });
+
+			bubble.transition().duration(300).style('opacity', 1);
+
+			y_axis_node = svg.append('g')
+					.attr('class','axis y')
+					.attr('transform', 'translate(' + 0 + ',' + 0 + ')');
+
+			x_axis_node = svg.append('g')
+				.attr('class','axis x')
+				.attr('transform', 'translate(' + 0 + ',' + height + ')');
+
+			(config.xAxis.showAxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis)
+									: false;
+			(config.yAxis.showAxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis)
+									: false;
+
 
 		}
 
