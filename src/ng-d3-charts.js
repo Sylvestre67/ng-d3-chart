@@ -225,33 +225,33 @@
 					initial=false)
 				: false;
 
-			var bar_nodes = svg.selectAll('.bar-node')
-				.data(data);
+			var bars = svg.selectAll('.bar').data(data);
 
-			bar_nodes.exit().remove();
+			bars.enter().append("rect")
+				.attr("class", (config.markClickCallback) ? "bar clickable" : "bar")
+				.attr("y", function(d) { return y(0); })
+				.style('fill',function(d,i){ return (colorScale != undefined)
+					? colorScale(i)
+					: barColor;
+				});
 
-			var bar_node = bar_nodes.enter().append('g')
-				.attr('class','bar-node');
+			bars.exit().remove();
 
-			var bar = bar_node.append("rect")
-				.attr("class", "bar")
-				.attr("class", (config.markClickCallback) ? "clickable" : false)
-				.attr("y", function(d) { return y(0); });
-
-			bar.style('fill',function(d,i){ return (colorScale != undefined)
-				? colorScale(i)
-				: barColor;
-			});
-
-			bar.transition().duration(300)
+			bars.transition().duration(300)
 				.attr("x", function(d) { return x(d[config.xMark]); })
 				.attr("y", function(d,i) { return y(d[config.yDimension]); })
 				.attr("width", x.rangeBand())
 						.attr("height", function(d) { return height - y(d[config.yDimension]); })
 						.delay(function(d,i) { return i*config.delayedEntrance; });
 
+			svg.selectAll('.label-node').remove();
+
+			var label_nodes = svg.selectAll('.label-node').data(data);
+
+			var label_node = label_nodes.enter().append('g').attr('class','label-node');
+
 			(config.addLabelToMark)
-				 ? bar_node.append('text')
+				 ? label_node.append('text')
 					.style('opacity',0)
 					.attr('class','bar-label')
 					.attr("x", function(d) { return x(d[config.xMark]) + x.rangeBand()*.25; })
@@ -285,7 +285,7 @@
 			 * Events
 			 * ***/
 			(config.markClickCallback)
-				? bar_nodes.on('click',function(){ eval(config.markClickCallback) })
+				? bars.on('click',function(){ eval(config.markClickCallback) })
 				: false;
 
 		}
@@ -807,19 +807,21 @@
 			link: function(scope,element,attrs){
 				var d3isReady = d3Loader.d3();
 				$timeout(function(){
-					scope.$watch('dataset',function(newData,oldData){
-					(newData)
-						? (d3isReady.then(function(){ $timeout(function(){
+					scope.$watchCollection('[dataset,config]',function(newCollection,oldData){
+						var newData = newCollection[0];
+						var newConfig = newCollection[1];
 
-							console.info('Initiating: ' + scope.config.chartType);
+						console.log(newConfig);
 
-							var chartToDraw = eval(scope.config.chartType);
-							(chartToDraw)
-								? chartToDraw(scope.config,newData,element,attrs)
-								: console.error('Invalid chart name. Please adjust your chartType parameter.');
-						});}))
-						: false;
-					});
+						(newData && newConfig)
+							? (d3isReady.then(function(){ $timeout(function(){
+								var chartToDraw = eval(scope.config.chartType);
+								(chartToDraw)
+									? chartToDraw(newConfig,newData,element,attrs)
+									: console.error('Invalid chart name. Please adjust your chartType parameter.');
+							});}))
+							: false;
+						},true);
 				})
 
 			}
