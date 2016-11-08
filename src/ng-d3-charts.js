@@ -248,14 +248,18 @@
 
 			var label_nodes = svg.selectAll('.label-node').data(data);
 
-			var label_node = label_nodes.enter().append('g').attr('class','label-node');
+			var label_node = label_nodes.enter().append('g')
+				.attr("transform", function(d) {
+					return "translate("
+						+ (x(d[config.xMark]) + x.rangeBand()*.5) + ","
+						+ (y(d[config.yDimension]) - 5) + ")" ;
+				})
+				.attr('class','label-node');
 
 			(config.addLabelToMark)
 				 ? label_node.append('text')
 					.style('opacity',0)
 					.attr('class','bar-label')
-					.attr("x", function(d) { return x(d[config.xMark]) + x.rangeBand()*.25; })
-					.attr("y", function(d,i) { return y(d[config.yDimension]) - 5; })
 					.text(function(d){ return bar_label_format(d[config.yDimension])})
 						.transition().duration(300).style('opacity',1).delay(function(d,i) { return i*config.delayedEntrance; })
 				 : false;
