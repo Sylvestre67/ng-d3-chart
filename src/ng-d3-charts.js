@@ -128,7 +128,27 @@
 
 	}]);
 
-	mod.directive('ngBarChart', ['d3Loader','$timeout', function(d3Loader,$timeout) {
+	var resizeTimer;
+
+	mod.directive('resizeWindow',['$window','$timeout',function($window,$timeout) {
+		return function (scope, element) {
+				var onAir = false;
+
+				$timeout(function(){ onAir = true; });
+
+				scope.$watchCollection(function() {
+					return angular.element($window)[0].innerWidth;
+				},
+				function() {
+					clearTimeout(resizeTimer);
+					resizeTimer = setTimeout(function() {
+					(onAir) ? (scope.$root.$broadcast('windowReSize',{})) : false;
+				}, 250);
+			});
+		}
+	}]);
+
+	mod.directive('ngBarChart', ['d3Loader','$timeout','$window', function(d3Loader,$timeout,$window) {
 
 		/***********
 		*
@@ -809,25 +829,26 @@
 				config:'='
 			},
 			link: function(scope,element,attrs){
+				scope.waitForResize = false;
 				var d3isReady = d3Loader.d3();
 				$timeout(function(){
 					scope.$watchCollection('[dataset,config]',function(newCollection,oldData){
 						var newData = newCollection[0];
 						var newConfig = newCollection[1];
-
-						console.log(newConfig);
-
 						(newData && newConfig)
 							? (d3isReady.then(function(){ $timeout(function(){
 								var chartToDraw = eval(scope.config.chartType);
 								(chartToDraw)
-									? chartToDraw(newConfig,newData,element,attrs)
-									: console.error('Invalid chart name. Please adjust your chartType parameter.');
-							});}))
+									? ( chartToDraw(newConfig,newData,element,attrs),
+										scope.$on('windowReSize',function(){ element.html(''), chartToDraw(newConfig,newData,element,attrs); }) )
+									:  console.error('Invalid chart name. Please adjust the chartType parameter.');
+								});
+
+							}))
 							: false;
 						},true);
-				})
-
+					}
+				)
 			}
 		};
 	}]);
