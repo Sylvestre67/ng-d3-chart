@@ -150,11 +150,44 @@
 
 	mod.directive('ngBarChart', ['d3Loader','$timeout','$window', function(d3Loader,$timeout,$window) {
 
+		return {
+			restrict: 'E',
+			scope: {
+				dataset:'=',
+				config:'='
+			},
+			link: function(scope,element,attrs){
+				scope.waitForResize = false;
+				var d3isReady = d3Loader.d3();
+				$timeout(function(){
+					scope.$watchCollection('[dataset,config]',function(newCollection,oldData){
+						var newData = newCollection[0];
+						var newConfig = newCollection[1];
+						(newData && newConfig)
+							? (d3isReady.then(function(){ $timeout(function(){
+								var chartToDraw = eval(scope.config.chartType);
+								(chartToDraw)
+									? ( chartToDraw(newConfig,newData,element,attrs),
+										scope.$on('windowReSize',function(){
+											element.html(''),
+											chartToDraw(newConfig,newData,element,attrs); }
+										)
+									)
+									:  console.error('Invalid chart name. Please adjust the chartType parameter.');
+								});
+							}))
+							: false;
+						},true);
+					}
+				)
+			}
+		};
+
+
+
 		/***********
-		*
-		* Chart functions
-		*
-		* **********/
+		 * Chart functions
+		 * **********/
 
 		function barChartVertical(config,data,element,attrs){
 
@@ -228,21 +261,22 @@
 
 			(svgNotExist)
 				? (svg = d3.select(element[0])
-					.append("svg:svg")
-					.attr("width", full_width)
-					.attr("height", full_height)
-					.attr("class","bar-chart")
+						.append("svg:svg")
+						.attr("width", full_width)
+						.attr("height", full_height)
+						.attr("class","bar-chart")
 						.append("svg:g")
-					.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
-					initial = true
+						.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
+						initial = true
 				)
 				: svg = d3.select(element[0]).select('svg g');
 
 			(initial) ? (
-				y_axis_node = svg.append('g')
-					.attr('class','axis y')
-					.attr('transform', 'translate(' + 0 + ',' + 0 + ')'),
-					initial=false)
+					y_axis_node = svg.append('g')
+						.attr('class','axis y')
+						.attr('transform', 'translate(' + 0 + ',' + 0 + ')'),
+						initial=false
+				)
 				: false;
 
 			var bars = svg.selectAll('.bar').data(data);
@@ -261,8 +295,8 @@
 				.attr("x", function(d) { return x(d[config.xMark]); })
 				.attr("y", function(d,i) { return y(d[config.yDimension]); })
 				.attr("width", x.rangeBand())
-						.attr("height", function(d) { return height - y(d[config.yDimension]); })
-						.delay(function(d,i) { return i*config.delayedEntrance; });
+				.attr("height", function(d) { return height - y(d[config.yDimension]); })
+				.delay(function(d,i) { return i*config.delayedEntrance; });
 
 			svg.selectAll('.label-node').remove();
 
@@ -277,12 +311,12 @@
 				.attr('class','label-node');
 
 			(config.addLabelToMark)
-				 ? label_node.append('text')
+				? label_node.append('text')
 					.style('opacity',0)
 					.attr('class','bar-label')
 					.text(function(d){ return bar_label_format(d[config.yDimension])})
-						.transition().duration(300).style('opacity',1).delay(function(d,i) { return i*config.delayedEntrance; })
-				 : false;
+					.transition().duration(300).style('opacity',1).delay(function(d,i) { return i*config.delayedEntrance; })
+				: false;
 
 			//Remove and redraw x_axis because bottom to top animation.
 			svg.select('.axis.x').remove();
@@ -300,10 +334,10 @@
 				.attr('transform', 'translate(' + 0 + ',' + height + ')');
 
 			(config.xAxis.showAxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis)
-										 .selectAll('.tick text').call(wrap, x.rangeBand() * 1.1)
-									: false;
+					.selectAll('.tick text').call(wrap, x.rangeBand() * 1.1)
+				: false;
 			(config.yAxis.showAxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis)
-									: false;
+				: false;
 
 			/**
 			 * Events
@@ -370,14 +404,14 @@
 
 			(svgNotExist)
 				? (svg = d3.select(element[0])
-					.append("svg:svg")
-					.attr("width", full_width)
-					.attr("height", full_height)
-					.append("svg:g")
-					.attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
+						.append("svg:svg")
+						.attr("width", full_width)
+						.attr("height", full_height)
+						.append("svg:g")
+						.attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
 
-					initial = true
-			)
+						initial = true
+				)
 				: svg = d3.select(element[0]).select('svg g');
 
 			(initial)
@@ -387,35 +421,35 @@
 						.attr("transform", "translate(0," + (height) + ")")
 						.call(xAxis),
 
-					x_axis_node.append("text")
-						.style("text-anchor", "end")
-						.style("font-size", ".6em")
-						.attr("dx", (width - 5) + "px")
-						.attr("dy", "1.5em")
-						.text(config.XlabelText),
+						x_axis_node.append("text")
+							.style("text-anchor", "end")
+							.style("font-size", ".6em")
+							.attr("dx", (width - 5) + "px")
+							.attr("dy", "1.5em")
+							.text(config.XlabelText),
 
-					y_axis_node = svg.append("g")
-						.attr("class", "y axis")
-						.call(yAxis),
+						y_axis_node = svg.append("g")
+							.attr("class", "y axis")
+							.call(yAxis),
 
-					y_axis_node.append("text")
-						.attr("class", "axis-label")
-						.attr("transform", "rotate(-90)")
-						.attr("y", 6)
-						.attr("dy", ".6em")
-						.style("text-anchor", "end")
-						.style("font-size", ".6em")
-						.text(config.YlabelText),
+						y_axis_node.append("text")
+							.attr("class", "axis-label")
+							.attr("transform", "rotate(-90)")
+							.attr("y", 6)
+							.attr("dy", ".6em")
+							.style("text-anchor", "end")
+							.style("font-size", ".6em")
+							.text(config.YlabelText),
 
-					initial = false
+						initial = false
 				)
 				: (
 					svg.select(".x.axis")
 						.transition().duration(750)
 						.call(xAxis),
-					svg.select(".y.axis")
-						.transition().duration(750)
-						.call(yAxis)
+						svg.select(".y.axis")
+							.transition().duration(750)
+							.call(yAxis)
 				);
 
 			var bar_nodes = svg.selectAll(".bar-node")
@@ -441,15 +475,15 @@
 				.delay(function(d,i) { return i * config.delayedEntrance; });
 
 			(config.addLabelToMark)
-				 ? bar_node.append('text')
+				? bar_node.append('text')
 					.style('opacity',0)
 					.style('font-size','12px')
 					.attr('class','bar-label')
 					.attr("y", function(d) { return y.rangeBand() * .5 + 6; })
 					.attr("x", width + 5)
 					.text(function(d){ return bar_label_format(d[config.xMark])})
-						.transition().duration(300).style('opacity',1).delay(function(d,i) { return i*config.delayedEntrance; })
-				 : false;
+					.transition().duration(300).style('opacity',1).delay(function(d,i) { return i*config.delayedEntrance; })
+				: false;
 
 			// Labelling to use cat instead of i
 			var labels = svg.selectAll(".label")
@@ -520,15 +554,15 @@
 
 			(svgNotExist)
 				? (svg = d3.select(element[0])
-					.append("svg:svg")
-					.attr("class", "line-chart")
-					.attr("width", full_width)
-					.attr("height", full_height)
-					.append("svg:g")
-					.attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
+						.append("svg:svg")
+						.attr("class", "line-chart")
+						.attr("width", full_width)
+						.attr("height", full_height)
+						.append("svg:g")
+						.attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
 
-					initial = true
-			)
+						initial = true
+				)
 				: svg = d3.select(element[0]).select('svg g');
 
 			var line = d3.svg.line()
@@ -555,34 +589,34 @@
 								.text(config.XlabelText))
 						: null),
 
-					((config.yAxis.showAxis) ? (
-						y_axis_node = svg.append("g")
-							.attr("class", "y axis")
-							.call(yAxis),
-						y_axis_node.append("text")
-							.attr("class", "axis-label")
-							.attr("transform", "rotate(-90)")
-							.attr("y", 6)
-							.attr("dy", ".6em")
-							.style("text-anchor", "end")
-							.style("font-size", ".6em")
-							.text(config.YlabelText))
-						: null),
+						((config.yAxis.showAxis) ? (
+								y_axis_node = svg.append("g")
+									.attr("class", "y axis")
+									.call(yAxis),
+									y_axis_node.append("text")
+										.attr("class", "axis-label")
+										.attr("transform", "rotate(-90)")
+										.attr("y", 6)
+										.attr("dy", ".6em")
+										.style("text-anchor", "end")
+										.style("font-size", ".6em")
+										.text(config.YlabelText))
+							: null),
 
-					svg.append("path")
-						.attr("class", "line")
-						.attr("d", line(data))
-					)
+						svg.append("path")
+							.attr("class", "line")
+							.attr("d", line(data))
+				)
 				: (
 					svg.select(".x.axis")
 						.transition().duration(750)
 						.call(xAxis),
-					svg.select(".y.axis")
-						.transition().duration(750)
-						.call(yAxis),
-					svg.select(".line")
-						.transition().duration(750)
-						.attr("d", line(data))
+						svg.select(".y.axis")
+							.transition().duration(750)
+							.call(yAxis),
+						svg.select(".line")
+							.transition().duration(750)
+							.attr("d", line(data))
 				)
 		}
 
@@ -639,12 +673,12 @@
 
 			(svgNotExist)
 				? (svg = d3.select(element[0])
-					.append("svg:svg")
-					.attr("width", full_width)
-					.attr("height", full_height)
-					.attr("class","bar-chart")
+						.append("svg:svg")
+						.attr("width", full_width)
+						.attr("height", full_height)
+						.attr("class","bar-chart")
 						.append("svg:g")
-					.attr("transform", "translate(" + margin.left + "," + margin.top +")")
+						.attr("transform", "translate(" + margin.left + "," + margin.top +")")
 				)
 				: svg = d3.select(element[0]).select('svg g');
 
@@ -654,7 +688,7 @@
 			dot.enter().append('g')
 				.attr('transform',function(d){ return 'translate(' + x(d[config.xMark]) + ',' + height + ')' })
 				.attr('class','dot')
-					.append('circle').attr('r',2).attr('fill',function(d){ return color_scale(d.cat) });
+				.append('circle').attr('r',2).attr('fill',function(d){ return color_scale(d.cat) });
 
 			dot.exit().transition().duration(100)
 				.remove();
@@ -725,13 +759,13 @@
 
 			(svgNotExist)
 				? (svg = d3.select(element[0])
-					.append("svg:svg")
-					.attr("width", full_width)
-					.attr("height", full_height)
-					.attr("class","bar-chart")
+						.append("svg:svg")
+						.attr("width", full_width)
+						.attr("height", full_height)
+						.attr("class","bar-chart")
 						.append("svg:g")
-					.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
-					initial = true
+						.attr("transform", "translate(" + margin.left + "," + margin.top +")"),
+						initial = true
 				)
 				: svg = d3.select(element[0]).select('svg g');
 
@@ -753,104 +787,295 @@
 			bubble.transition().duration(300).style('opacity', 1);
 
 			y_axis_node = svg.append('g')
-					.attr('class','axis y')
-					.attr('transform', 'translate(' + 0 + ',' + 0 + ')');
+				.attr('class','axis y')
+				.attr('transform', 'translate(' + 0 + ',' + 0 + ')');
 
 			x_axis_node = svg.append('g')
 				.attr('class','axis x')
 				.attr('transform', 'translate(' + 0 + ',' + height + ')');
 
 			(config.xAxis.showAxis) ? svg.select('.x.axis').transition().duration(300).call(x_axis)
-									: false;
+				: false;
 			(config.yAxis.showAxis) ? svg.select('.y.axis').transition().duration(300).call(y_axis)
-									: false;
+				: false;
 
 
 		}
 
+		function donutChart(config,data,element,attrs){
+
+			var margin = config.margin,
+				full_width = attrs.$$element[0].parentNode.clientWidth,
+				full_height= (attrs.$$element[0].parentNode.offsetHeight) * .95,
+				width = full_width - margin.left - margin.right,
+				height = full_height - margin.top - margin.bottom,
+				radius = (Math.min(width, height) / 2) - 50,
+				colorScale,arc,labelArc,labelCoord,percentFormat;
+
+			//SETTING UP DATA
+			var dataset = [
+				{"gender":"male",
+					"value":d3.sum(data.map(function(d){ return d.data[0].value})) * 0.01 },
+				{"gender":"female",
+					"value":d3.sum(data.map(function(d){ return d.data[1].value})) * 0.01},
+			];
+
+			colorScale = eval(config.colorScale);
+
+			percentFormat = d3.format('%');
+
+			arc = d3.svg.arc()
+				.outerRadius(radius)
+				.innerRadius(radius * .4);
+
+			labelArc = d3.svg.arc()
+				.outerRadius(radius * 2)
+				.innerRadius(radius * .4);
+
+			var pie = d3.layout.pie()
+				.sort(null)
+				.value(function(d) { return d[config.xMark]; });
+
+			labelCoord = pie(dataset).map(function(obj){ return {data:obj.data,coord:labelArc.centroid(obj)}; });
+
+			var svg = d3.select(element[0]).append("svg")
+				.attr("width", width)
+				.attr("height", height)
+				.append("g")
+				.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+			var g = svg.selectAll(".arc")
+				.data(pie(dataset))
+				.enter().append("g")
+				.attr("class", "arc");
+
+			g.append("path")
+				.attr("d", arc)
+				.style("fill", function(d) { return colorScale(d.data[config.yDimension]); });
+
+			var labels = svg.selectAll(".label")
+				.data(labelCoord);
+
+			labels.enter().append('g')
+				.attr('class','label')
+				.attr('transform',function(d,i){ return 'translate(' + d.coord[0] + ',' + d.coord[1] + ')'});
+
+			labels.append('text')
+				.attr('font-family', 'FontAwesome')
+				.attr('font-size', function(d) { return '36px'} )
+				.attr('fill',function(d,i){ return colorScale(d.data.gender) })
+				.attr('dy',function(d,i){ return (d.data.value > .7) ? '23px' : '0';} )
+				.style('text-anchor',function(d,i) {
+					return (d.data.gender === 'male')
+						? 'start'
+						: 'end';
+				})
+				.text(function(d,i) {
+					return (d.data.gender === 'female')
+						? '\uf182'
+						: '\uf183';
+				})
+				.style('opacity','0')
+				.transition().duration(500)
+				.style('opacity','1');
+
+			labels.append('text')
+				.attr('font-family', '"Open Sans",Helvetica,Arial,sans-serif;')
+				.attr('font-size', function(d) { return '20px'} )
+				.attr('font-weight', function(d) { return '400'} )
+				.attr('fill',function(d,i){ return colorScale(d.data.gender) })
+				.attr('dy',function(d,i){ return (d.data.value > .7) ? '15px' : '-5px';} )
+				.attr('dx',function(d,i){ return (d.data.gender === 'female') ? '-30px' : '30px';} )
+				.style('text-anchor',function(d,i) {
+					return (d.data.gender === 'male')
+						? 'start'
+						: 'end';
+				})
+				.text(function(d,i) {
+					return (d.data.gender === 'female')
+						? percentFormat(d.data.value)
+						: percentFormat(d.data.value);
+				})
+				.style('opacity','0')
+				.transition().duration(500)
+				.style('opacity','1');
+
+		}
+
+		function demoBarChart(config,data,element,attrs){
+
+			var margin = config.margin,
+				full_width = attrs.$$element[0].parentNode.clientWidth,
+				full_height= (attrs.$$element[0].parentNode.offsetHeight) * .95,
+				width = full_width - margin.left - margin.right,
+				height = full_height - margin.top - margin.bottom,
+				colorScale;
+
+			var x = d3.scale.ordinal()
+				.rangeRoundBands([0,width],config.xAxis.barPadding,config.xAxis.barOuterPadding);
+
+			var y = d3.scale.linear().range([0,height*.5]);
+
+			var x_axis_top = d3.svg.axis()
+				.scale(x)
+				.orient('top')
+				.ticks(eval(config.xAxis.ticks))
+				.tickSize(config.xAxis.tickSize)
+				.outerTickSize(0)
+				//.innerTickSize(config.xAxis_innerTickSize)
+				.tickPadding(config.xAxis.tickPadding)
+				.tickFormat((config.xAxis.tickFormat) ? eval(config.xAxis.tickFormat) : null)
+				.tickValues(eval(config.xAxis.tickValues));
+
+			var x_axis_bottom = d3.svg.axis()
+				.scale(x)
+				.orient(config.xAxis.orient)
+				.ticks(eval(config.xAxis.ticks))
+				.tickSize(config.xAxis.tickSize)
+				.outerTickSize(0)
+				//.innerTickSize(config.xAxis_innerTickSize)
+				.tickPadding(config.xAxis.tickPadding)
+				.tickFormat((config.xAxis.tickFormat) ? eval(config.xAxis.tickFormat) : null)
+				.tickValues(eval(config.xAxis.tickValues));
+
+
+			// Set up x_axis with non-numeric values.
+			var x_domain = data.map(function(d,i){ return d[config.xMark]} );
+			//angular.forEach(data,function(d,i){	x_domain.push(d[config.xMark]); });
+			x.domain(x_domain);
+
+			// Find female_max
+			var female_max = d3.max(data,function(d,i){ return d.data[1].value});
+			var male_max = d3.max(data,function(d,i){ return d.data[0].value});
+			var max_y = d3.max([female_max,male_max]);
+			y.domain([0,max_y * 1.2 ]);
+
+			var tooltip = d3.select('body')
+				.append('div')
+				.style("opacity",0)
+				.attr('class','t-tip');
+
+			//tooltip.html('<p>ToolTip</p>');
+
+			var svg = d3.select(element[0])
+				.append("svg:svg")
+				.attr("width", full_width)
+				.attr("height", full_height)
+				.attr("class","demo-bar-chart")
+				.append("svg:g")
+				.attr("transform", "translate(" + margin.left + "," + margin.top +")");
+
+			var y_node = svg.selectAll('.y-ticks')
+				.data([1,2,3,4,5,6]);
+
+			y_node.enter().append('g')
+				.attr('class','y-ticks')
+				.attr('transform', function(d,i){ return 'translate(' + 10 + ',' + (height/6) * i + ')'} );
+
+			y_node.append('line')
+				.style('fill','none')
+				.style('stroke', function(d,i){ return (i !== 0 ) ? '#eee' : false; })
+				.attr('x1', -10).attr('y1',0).attr('x2',(width - margin.right)).attr('y2',0);
+
+
+			var bar_node = svg.selectAll('.bar').data(data);
+
+			bar_node.enter().append('g')
+				.attr('class','bar')
+				.attr('transform',function(d,i){ return 'translate(' + x(d[config.xMark]) + ',' + height/2 +')'; });
+
+			//bar_node.append('circle').attr('fill','red').attr('r',5);
+
+			var bar = bar_node.selectAll('.bar')
+				.data(function(d){ return d.data; })
+
+			var rect = bar.enter('rect')
+				.append('rect')
+				.attr('class','bar')
+				.attr('width',x.rangeBand() + 'px')
+				.style('fill',function(d,i){
+					return (d.gender === 'male')
+						?  "#00A1E4"
+						:  "#0d233a";
+				})
+				.attr('transform',function(d,i){
+					return (d.gender === 'male')
+						?  'translate(0,0)'
+						: 'translate(0,' + -y(d.value)  + ')';
+				})
+				.attr('height',function(d,i){ return y(d.value); });
+
+			rect.on('mouseenter',function(d){
+				d3.select('.t-tip').html('<span>' + d.value + '%' + '</span>')
+					.style("opacity",1)
+					.style("left", (d3.event.pageX) + "px")
+					.style("top", (d3.event.pageY) - 20 + "px");
+			});
+
+			rect.on('mouseout',function(d){
+				d3.select('.t-tip').style("opacity",0)
+					.style("left", 1000 + "px")
+					.style("top", 1000 + "px");
+			});
+
+			var x_node_top = svg.append('g')
+				.attr('class','axis x')
+				.attr('transform', 'translate(' + 0 + ',' + 0 + ')')
+				.call(x_axis_top);
+
+			var x_node_bottom = svg.append('g')
+				.attr('class','axis x')
+				.attr('transform', 'translate(' + 0 + ',' + height + ')')
+				.call(x_axis_bottom);
+
+		}
+
 		/***********
-		*
-		* Utils
-		*
-		* **********/
+		 * Utils
+		 * **********/
 
 		function leftMarginToBiggestYLabelWidth(element,y_axis,margin){
-				var y_format,widest_y_label;
-				//Set the margin left to display the longest label on y axis.
-				y_format = y_axis.scale().tickFormat(),
+			var y_format,widest_y_label;
+			//Set the margin left to display the longest label on y axis.
+			y_format = y_axis.scale().tickFormat(),
 				widest_y_label = d3.select(element[0]).append('text')
 					.text(y_format(y_axis.scale().ticks()[y_axis.scale().ticks().length -1])),
 				//Only if the given margin.left on the config object is smaller than the biggest label.
 				(margin.left < widest_y_label[0][0].offsetWidth * 1.5 )
 					? (console.info('refactoring margin'),margin.left = (widest_y_label[0][0].offsetWidth * 1.5))
 					: false;
-				widest_y_label.remove();
-				return margin;
-			}
+			widest_y_label.remove();
+			return margin;
+		}
 
 		/**
 		 * From: http://bl.ocks.org/mbostock/7555321
 		 * **/
 
 		function wrap(text, width) {
-		  text.each(function() {
-			var text = d3.select(this),
-				words = text.text().split(/\s+/).reverse(),
-				word,
-				line = [],
-				lineNumber = 0,
-				lineHeight = 1.1, // ems
-				y = text.attr("y"),
-				dy = parseFloat(text.attr("dy")),
-				tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
-			while (word = words.pop()) {
-			  line.push(word);
-			  tspan.text(line.join(" "));
-			  if (tspan.node().getComputedTextLength() > width) {
-				line.pop();
-				tspan.text(line.join(" "));
-				line = [word];
-				tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
-			  }
-			}
-		  });
+			text.each(function() {
+				var text = d3.select(this),
+					words = text.text().split(/\s+/).reverse(),
+					word,
+					line = [],
+					lineNumber = 0,
+					lineHeight = 1.1, // ems
+					y = text.attr("y"),
+					dy = parseFloat(text.attr("dy")),
+					tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+				while (word = words.pop()) {
+					line.push(word);
+					tspan.text(line.join(" "));
+					if (tspan.node().getComputedTextLength() > width) {
+						line.pop();
+						tspan.text(line.join(" "));
+						line = [word];
+						tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+					}
+				}
+			});
 		}
 
-		/***********
-		*
-		* Directive
-		*
-		* **********/
-
-		return {
-			restrict: 'E',
-			scope: {
-				dataset:'=',
-				config:'='
-			},
-			link: function(scope,element,attrs){
-				scope.waitForResize = false;
-				var d3isReady = d3Loader.d3();
-				$timeout(function(){
-					scope.$watchCollection('[dataset,config]',function(newCollection,oldData){
-						var newData = newCollection[0];
-						var newConfig = newCollection[1];
-						(newData && newConfig)
-							? (d3isReady.then(function(){ $timeout(function(){
-								var chartToDraw = eval(scope.config.chartType);
-								(chartToDraw)
-									? ( chartToDraw(newConfig,newData,element,attrs),
-										scope.$on('windowReSize',function(){ element.html(''), chartToDraw(newConfig,newData,element,attrs); }) )
-									:  console.error('Invalid chart name. Please adjust the chartType parameter.');
-								});
-
-							}))
-							: false;
-						},true);
-					}
-				)
-			}
-		};
 	}]);
 	return moduleName;
 }));
